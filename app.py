@@ -474,6 +474,15 @@ ADMIN_PAGE = """
   .add-form{{background:#F5F1E8; padding:16px; margin-top:10px; max-width:400px;}}
   .add-form input{{width:100%; padding:8px; margin-bottom:10px;}}
   .empty{{color:#666;}}
+  .btn-link{{display:inline-block; padding:5px 10px; border-radius:4px; font-size:0.8rem; margin:2px;
+    background:#24272B; color:#fff; text-decoration:none;}}
+  .btn-link:hover{{background:#A6502F;}}
+  .cat-chip{{display:inline-flex; align-items:center; gap:6px; background:#F5F1E8; border:1px solid #ccc;
+    border-radius:100px; padding:4px 6px 4px 12px; margin:3px; font-size:0.85rem;}}
+  .edit-form{{background:#F5F1E8; padding:24px; max-width:480px; border-radius:6px;}}
+  .edit-form label{{display:block; font-weight:bold; margin:14px 0 4px; font-size:0.85rem;}}
+  .edit-form input, .edit-form select{{width:100%; padding:8px; font-size:0.95rem;}}
+  .save-btn{{background:#3f7a4d; color:#fff; margin-top:18px; padding:10px 18px;}}
   .badge{{padding:2px 8px; border-radius:100px; font-size:0.75rem;}}
   .b-priority{{background:#f1dfa8;}} .b-normal{{background:#dfe3e2;}} .b-frozen{{background:#ddd;}}
 </style>
@@ -532,6 +541,7 @@ def admin_page():
               <td>{t.get('category_id','')} ({cat_title.get(t.get('category_id'),'')})</td>
               <td>{t.get('details','')}</td><td>{t.get('location','')}</td>
               <td>
+                <a class="btn-link" href="/admin/edit-trader?key={key}&id={t['id']}">تعديل</a>
                 <form class="inline" method="POST" action="/admin/trader-action">
                   <input type="hidden" name="key" value="{key}">
                   <input type="hidden" name="id" value="{t['id']}">
@@ -562,6 +572,7 @@ def admin_page():
               <td>{cat_title.get(t.get('category_id'),'')}</td>
               <td>{visibility_badge(vis)}</td>
               <td>
+                <a class="btn-link" href="/admin/edit-trader?key={key}&id={t['id']}">تعديل</a>
                 <form class="inline" method="POST" action="/admin/set-visibility">
                   <input type="hidden" name="key" value="{key}">
                   <input type="hidden" name="id" value="{t['id']}">
@@ -593,7 +604,11 @@ def admin_page():
           <th>الاسم</th><th>واتساب</th><th>التخصص</th><th>الحالة</th><th>إجراء</th>
         </tr>{rows}</table>"""
 
-    categories_list = " — ".join(f"{c['title']}" for c in categories)
+    categories_list = "".join(
+        f'<span class="cat-chip">{c["title"]} '
+        f'<a class="btn-link" href="/admin/edit-category?key={key}&id={c["id"]}">تعديل</a></span>'
+        for c in categories
+    )
 
     return ADMIN_PAGE.format(
         pending_count=len(pending),
@@ -660,6 +675,174 @@ def admin_add_category():
     categories = get_categories()
     new_id = "cat_c" + uuid.uuid4().hex[:6]
     categories.append({"id": new_id, "title": title, "match": [title]})
+    save_json(CATEGORIES_FILE, categories)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+EDIT_TRADER_PAGE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تعديل بيانات تاجر</title>
+<style>
+  body{{font-family:Arial,sans-serif; background:#EAE4D9; color:#24272B; padding:24px;}}
+  .edit-form{{background:#F5F1E8; padding:24px; max-width:480px; border-radius:6px;}}
+  .edit-form label{{display:block; font-weight:bold; margin:14px 0 4px; font-size:0.85rem;}}
+  .edit-form input, .edit-form select{{width:100%; padding:8px; font-size:0.95rem;}}
+  button{{padding:10px 18px; border:none; border-radius:4px; cursor:pointer; margin-top:18px;}}
+  .save-btn{{background:#3f7a4d; color:#fff;}}
+  a.back{{display:inline-block; margin-bottom:16px; color:#454B50;}}
+</style>
+</head>
+<body>
+<a class="back" href="/admin?key={key}">← رجوع للوحة الإدارة</a>
+<h2>تعديل بيانات: {name}</h2>
+<form class="edit-form" method="POST" action="/admin/update-trader">
+  <input type="hidden" name="key" value="{key}">
+  <input type="hidden" name="id" value="{id}">
+
+  <label>اسم التاجر / المحل</label>
+  <input type="text" name="name" value="{name}" required>
+
+  <label>رقم الواتساب</label>
+  <input type="text" name="whatsapp" value="{whatsapp}" required>
+
+  <label>التخصص</label>
+  <select name="category_id">
+    {category_options}
+  </select>
+
+  <label>كل المنتجات اللي بيبيعها (تفاصيل)</label>
+  <input type="text" name="details" value="{details}">
+
+  <label>موقع المحل في السوق</label>
+  <input type="text" name="location" value="{location}" required>
+
+  <label>ملاحظات</label>
+  <input type="text" name="notes" value="{notes}">
+
+  <button class="save-btn" type="submit">حفظ التعديلات</button>
+</form>
+</body>
+</html>
+"""
+
+
+@app.route("/admin/edit-trader", methods=["GET"])
+def edit_trader_page():
+    key = request.args.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    trader_id = request.args.get("id", "")
+    traders = get_traders()
+    trader = next((t for t in traders if t["id"] == trader_id), None)
+    if not trader:
+        return "التاجر غير موجود", 404
+
+    categories = get_categories()
+    options = "".join(
+        f'<option value="{c["id"]}"'
+        f'{" selected" if c["id"] == trader.get("category_id") else ""}>'
+        f'{c["title"]}</option>'
+        for c in categories
+    )
+
+    return EDIT_TRADER_PAGE.format(
+        key=key,
+        id=trader["id"],
+        name=trader.get("name", ""),
+        whatsapp=trader.get("whatsapp", ""),
+        details=trader.get("details", ""),
+        location=trader.get("location", ""),
+        notes=trader.get("notes", ""),
+        category_options=options,
+    )
+
+
+@app.route("/admin/update-trader", methods=["POST"])
+def update_trader():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    trader_id = request.form.get("id")
+    traders = get_traders()
+    for t in traders:
+        if t["id"] == trader_id:
+            t["name"] = request.form.get("name", t.get("name", ""))
+            t["whatsapp"] = request.form.get("whatsapp", t.get("whatsapp", ""))
+            t["category_id"] = request.form.get("category_id", t.get("category_id", ""))
+            t["details"] = request.form.get("details", t.get("details", ""))
+            t["location"] = request.form.get("location", t.get("location", ""))
+            t["notes"] = request.form.get("notes", t.get("notes", ""))
+    save_traders(traders)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+EDIT_CATEGORY_PAGE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تعديل تخصص</title>
+<style>
+  body{{font-family:Arial,sans-serif; background:#EAE4D9; color:#24272B; padding:24px;}}
+  .edit-form{{background:#F5F1E8; padding:24px; max-width:480px; border-radius:6px;}}
+  .edit-form label{{display:block; font-weight:bold; margin:14px 0 4px; font-size:0.85rem;}}
+  .edit-form input{{width:100%; padding:8px; font-size:0.95rem;}}
+  button{{padding:10px 18px; border:none; border-radius:4px; cursor:pointer; margin-top:18px;}}
+  .save-btn{{background:#3f7a4d; color:#fff;}}
+  a.back{{display:inline-block; margin-bottom:16px; color:#454B50;}}
+</style>
+</head>
+<body>
+<a class="back" href="/admin?key={key}">← رجوع للوحة الإدارة</a>
+<h2>تعديل اسم التخصص</h2>
+<form class="edit-form" method="POST" action="/admin/update-category">
+  <input type="hidden" name="key" value="{key}">
+  <input type="hidden" name="id" value="{id}">
+  <label>اسم التخصص</label>
+  <input type="text" name="title" value="{title}" required>
+  <button class="save-btn" type="submit">حفظ التعديل</button>
+</form>
+</body>
+</html>
+"""
+
+
+@app.route("/admin/edit-category", methods=["GET"])
+def edit_category_page():
+    key = request.args.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    cat_id = request.args.get("id", "")
+    cat = get_category_by_id(cat_id)
+    if not cat:
+        return "التخصص غير موجود", 404
+
+    return EDIT_CATEGORY_PAGE.format(key=key, id=cat["id"], title=cat["title"])
+
+
+@app.route("/admin/update-category", methods=["POST"])
+def update_category():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    cat_id = request.form.get("id")
+    new_title = request.form.get("title", "").strip()
+    if not new_title:
+        return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+    categories = get_categories()
+    for c in categories:
+        if c["id"] == cat_id:
+            c["title"] = new_title
+            if new_title not in c.get("match", []):
+                c.setdefault("match", []).append(new_title)
     save_json(CATEGORIES_FILE, categories)
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
