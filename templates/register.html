@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل تاجر — دليل السجانة</title>
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#EAE4D9; --steel:#24272B; --steel-soft:#454B50;
+    --rust:#A6502F; --paper:#F5F1E8; --line: rgba(36,39,43,0.16);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--sand); color:var(--steel); font-family:'IBM Plex Sans Arabic',sans-serif; line-height:1.7;}
+  .wrap{max-width:640px; margin:0 auto; padding:48px 20px 80px;}
+  h1.display{font-family:'Lalezar',sans-serif; font-weight:400; font-size:2.2rem; margin:0 0 8px;}
+  .sub{color:var(--steel-soft); margin:0 0 36px;}
+  form{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:28px;}
+  label{display:block; font-weight:600; margin:0 0 8px; font-size:0.95rem;}
+  .field{margin-bottom:22px;}
+  input, select{
+    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:4px;
+    font-family:inherit; font-size:1rem; background:#fff; color:var(--steel);
+  }
+  input:focus, select:focus{outline:2px solid var(--rust); outline-offset:1px;}
+  .hint{font-size:0.85rem; color:var(--steel-soft); margin-top:6px;}
+  button{
+    width:100%; padding:14px; background:var(--steel); color:var(--paper);
+    border:none; border-radius:4px; font-size:1.05rem; font-weight:700; cursor:pointer;
+    font-family:inherit;
+  }
+  button:hover{background:var(--rust);}
+  button:disabled{opacity:0.6; cursor:not-allowed;}
+  #msg{margin-top:18px; padding:14px; border-radius:4px; display:none; font-size:0.95rem;}
+  #msg.ok{display:block; background:#e4efe6; color:#2c5a36; border:1px solid #b9d8bf;}
+  #msg.err{display:block; background:#f6e3df; color:#7e3a20; border:1px solid #e0b5a8;}
+  a.back{display:inline-block; margin-bottom:24px; color:var(--steel-soft); text-decoration:none; font-size:0.9rem;}
+  .logo-header{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .logo-header img{height:36px; width:36px; object-fit:contain;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← رجوع للصفحة الرئيسية</a>
+  <div class="logo-header"><img src="/static/logo.png" alt="شعار واتساب السجانة"></div>
+  <h1 class="display">سجّل محلك في الدليل</h1>
+  <p class="sub">املا بياناتك وهنتواصل معاك عبر واتساب لتفعيل حسابك خلال يوم أو اتنين.</p>
+
+  <form id="traderForm">
+    <div class="field">
+      <label for="name">اسم التاجر / المحل</label>
+      <input type="text" id="name" name="name" required>
+    </div>
+
+    <div class="field">
+      <label for="whatsapp">رقم الواتساب</label>
+      <input type="tel" id="whatsapp" name="whatsapp" placeholder="249912345678" required>
+      <div class="hint">اكتب الرقم بالكامل مع مفتاح الدولة، بدون علامة +</div>
+    </div>
+
+    <div class="field">
+      <label for="specialty">التخصص</label>
+      <select id="specialty" name="specialty" required>
+        <option value="">اختر التخصص</option>
+        <!--CATEGORY_OPTIONS-->
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="details">كل المنتجات اللي بتبيعها بالتفصيل</label>
+      <input type="text" id="details" name="details" placeholder="مثال: سيراميك إسباني، بورسلين، لاصق سيراميك، أدوات تركيب" required>
+      <div class="hint">اكتب كل حاجة بتبيعها مش بس التخصص الأساسي — ده بيساعدنا نوصلك بأكبر عدد زبائن حتى لو سألوا عن منتج تفصيلي</div>
+    </div>
+
+    <div class="field">
+      <label for="location">موقع المحل في السوق</label>
+      <input type="text" id="location" name="location" placeholder="مثال: شارع سوداتل" required>
+    </div>
+
+    <div class="field">
+      <label for="notes">ملاحظات إضافية (اختياري)</label>
+      <input type="text" id="notes" name="notes">
+    </div>
+
+    <button type="submit" id="submitBtn">إرسال التسجيل</button>
+    <div id="msg"></div>
+  </form>
+</div>
+
+<script>
+document.getElementById('traderForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('msg');
+  btn.disabled = true;
+  btn.textContent = 'جاري الإرسال...';
+  msg.style.display = 'none';
+
+  const data = {
+    name: document.getElementById('name').value,
+    whatsapp: document.getElementById('whatsapp').value,
+    specialty: document.getElementById('specialty').value,
+    details: document.getElementById('details').value,
+    location: document.getElementById('location').value,
+    notes: document.getElementById('notes').value,
+  };
+
+  try{
+    const res = await fetch('/submit-trader', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+    if(result.status === 'ok'){
+      msg.className = 'ok';
+      msg.textContent = 'تم التسجيل بنجاح! هنتواصل معاك قريباً عبر واتساب.';
+      msg.style.display = 'block';
+      document.getElementById('traderForm').reset();
+    } else {
+      throw new Error(result.message || 'حدث خطأ');
+    }
+  } catch(err){
+    msg.className = 'err';
+    msg.textContent = 'حصلت مشكلة في الإرسال، حاول تاني أو تواصل معانا مباشرة عبر واتساب.';
+    msg.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'إرسال التسجيل';
+  }
+});
+</script>
+</body>
+</html>
