@@ -36,12 +36,12 @@ PRIORITY_SLOTS = 2
 
 JOIN_ROW_ID = "cat_join_trader"
 
-WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص اللي بتدور عليه من القائمة تحت:"
+WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص الذي تبحث عنه من القائمة تحت:"
 NOT_FOUND_MESSAGE = (
     "ما لقيتش تخصص مطابق 🤔\n"
     "اكتب اسم التخصص، أو اكتب \"قائمة\" عشان تشوف كل الخيارات."
 )
-EMPTY_CATEGORY_MESSAGE = "لسه مفيش تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
+EMPTY_CATEGORY_MESSAGE = "لسه مافي تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
 LIMIT_REACHED_MESSAGE = (
     "وصلت للحد الأقصى من الرسائل المسموحة النهاردة 🙏\n"
     "جرب تاني بكرة، أو لو الموضوع مستعجل تواصل معانا مباشرة."
@@ -53,8 +53,8 @@ JOIN_REPLY_TEXT = (
 ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف اللي بتدور عليه، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
 TRADER_THANK_YOU_TEXT = (
     "شكراً لتسجيلك في دليل السجانة! 🎉\n"
-    "طلبك دلوقتي قيد المراجعة، وهنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
-    "لو حابب تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
+    "طلبك الان قيد المراجعة، وسبلغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "لو حابي تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
 ROLE_TRADER_ID = "role_trader"
@@ -95,11 +95,11 @@ DEFAULT_CATEGORIES = [
 DEFAULT_TRADERS = [
     {"id": "t1", "name": "ديزاين لاين", "whatsapp": "249912351105", "category_id": "cat_decor",
      "location": "شارع النص", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t2", "name": "هنادي", "whatsapp": "966562762669", "category_id": "cat_ceramic",
+    {"id": "t2", "name": "حسن", "whatsapp": "966562762669", "category_id": "cat_ceramic",
      "location": "شارع سوداتل", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t3", "name": "سحر", "whatsapp": "249918213703", "category_id": "cat_cement",
+    {"id": "t3", "name": "جمال", "whatsapp": "249918213703", "category_id": "cat_cement",
      "location": "شارع الحرية", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t4", "name": "شروق", "whatsapp": "249927382171", "category_id": "cat_electric",
+    {"id": "t4", "name": "شوقي", "whatsapp": "249927382171", "category_id": "cat_electric",
      "location": "شارع البوسنة", "details": "", "status": "approved", "visibility": "normal"},
     {"id": "t5", "name": "محمد", "whatsapp": "249123091999", "category_id": "cat_plumbing",
      "location": "الملجة", "details": "", "status": "approved", "visibility": "normal"},
