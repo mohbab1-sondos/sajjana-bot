@@ -24,6 +24,8 @@ TRADERS_FILE = os.path.join(BASE_DIR, "traders.json")
 CATEGORIES_FILE = os.path.join(BASE_DIR, "categories.json")
 COUNTERS_FILE = os.path.join(BASE_DIR, "counters.json")
 SHOWN_FILE = os.path.join(BASE_DIR, "shown_history.json")
+USERS_FILE = os.path.join(BASE_DIR, "users.json")
+STATS_FILE = os.path.join(BASE_DIR, "message_stats.json")
 
 REGISTER_URL = "https://mohbab.pythonanywhere.com/register"
 
@@ -48,6 +50,15 @@ JOIN_REPLY_TEXT = (
     f"يسعدنا انضمامك لدليل السجانة! 🎉\n"
     f"سجّل بياناتك من الرابط ده (يستغرق دقيقة بس):\n{REGISTER_URL}"
 )
+ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف اللي بتدور عليه، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
+TRADER_THANK_YOU_TEXT = (
+    "شكراً لتسجيلك في دليل السجانة! 🎉\n"
+    "طلبك دلوقتي قيد المراجعة، وهنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "لو حابب تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
+    f"{REGISTER_URL}"
+)
+ROLE_TRADER_ID = "role_trader"
+ROLE_CUSTOMER_ID = "role_customer"
 
 
 # =========================================================
@@ -119,6 +130,53 @@ if not os.path.exists(CATEGORIES_FILE):
     save_json(CATEGORIES_FILE, DEFAULT_CATEGORIES)
 if not os.path.exists(TRADERS_FILE):
     save_json(TRADERS_FILE, DEFAULT_TRADERS)
+
+
+def is_new_user(phone_number):
+    users = load_json(USERS_FILE, {})
+    return phone_number not in users
+
+
+def get_user_role(phone_number):
+    users = load_json(USERS_FILE, {})
+    return users.get(phone_number, {}).get("role")
+
+
+def set_user_role(phone_number, role):
+    users = load_json(USERS_FILE, {})
+    users.setdefault(phone_number, {"first_seen": str(date.today())})
+    users[phone_number]["role"] = role
+    save_json(USERS_FILE, users)
+
+
+def register_new_user(phone_number):
+    users = load_json(USERS_FILE, {})
+    if phone_number not in users:
+        users[phone_number] = {"first_seen": str(date.today()), "role": None}
+        save_json(USERS_FILE, users)
+
+
+def increment_message_stats():
+    stats = load_json(STATS_FILE, {"total": 0, "by_date": {}})
+    today = str(date.today())
+    stats["total"] = stats.get("total", 0) + 1
+    stats.setdefault("by_date", {})
+    stats["by_date"][today] = stats["by_date"].get(today, 0) + 1
+    # سيب بس آخر ٣٠ يوم في الإحصائيات التفصيلية عشان الملف يفضل صغير
+    if len(stats["by_date"]) > 30:
+        trimmed = dict(sorted(stats["by_date"].items())[-30:])
+        stats["by_date"] = trimmed
+    save_json(STATS_FILE, stats)
+    return stats
+
+
+def get_message_stats():
+    stats = load_json(STATS_FILE, {"total": 0, "by_date": {}})
+    today = str(date.today())
+    return {
+        "total": stats.get("total", 0),
+        "today": stats.get("by_date", {}).get(today, 0),
+    }
 
 
 def specialty_to_category_id(specialty_text):
@@ -306,6 +364,28 @@ def send_text_message(to_number, message):
     return response
 
 
+def send_role_question(to_number):
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، مين حضرتك؟"},
+            "action": {
+                "buttons": [
+                    {"type": "reply", "reply": {"id": ROLE_TRADER_ID, "title": "🔧 أنا تاجر"}},
+                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "🛒 أنا عميل"}},
+                ]
+            },
+        },
+    }
+    response = requests.post(GRAPH_API_URL, headers=headers, json=payload)
+    print("Send role question status:", response.status_code, response.text)
+    return response
+
+
 def send_list_message(to_number):
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
     rows = [{"id": c["id"], "title": c["title"]} for c in get_categories()][:9]
@@ -361,11 +441,18 @@ def receive_message():
         from_number = message["from"]
         msg_type = message.get("type")
 
+        increment_message_stats()
+
         if not check_and_increment_limit(from_number):
             send_text_message(from_number, LIMIT_REACHED_MESSAGE)
             return jsonify({"status": "ok"}), 200
 
-        selected_id = None
+        # أول رسالة من رقم جديد تماماً: نسأله تاجر ولا عميل قبل أي حاجة تانية
+        if is_new_user(from_number):
+            register_new_user(from_number)
+            send_role_question(from_number)
+            return jsonify({"status": "ok"}), 200
+
         if msg_type == "text":
             user_text = message["text"]["body"]
             kind, value_ = find_text_action(user_text)
@@ -381,15 +468,26 @@ def receive_message():
 
         elif msg_type == "interactive":
             interactive = message.get("interactive", {})
+            selected_id = None
+
             if interactive.get("type") == "list_reply":
                 selected_id = interactive["list_reply"]["id"]
-                if selected_id == JOIN_ROW_ID:
-                    send_text_message(from_number, JOIN_REPLY_TEXT)
-                elif get_category_by_id(selected_id):
-                    reply = build_category_reply(selected_id, from_number)
-                    send_text_message(from_number, reply)
-                else:
-                    send_text_message(from_number, NOT_FOUND_MESSAGE)
+            elif interactive.get("type") == "button_reply":
+                selected_id = interactive["button_reply"]["id"]
+
+            if selected_id == ROLE_TRADER_ID:
+                set_user_role(from_number, "trader")
+                send_text_message(from_number, JOIN_REPLY_TEXT)
+            elif selected_id == ROLE_CUSTOMER_ID:
+                set_user_role(from_number, "customer")
+                send_text_message(from_number, ASK_PRODUCT_TEXT)
+            elif selected_id == JOIN_ROW_ID:
+                send_text_message(from_number, JOIN_REPLY_TEXT)
+            elif selected_id and get_category_by_id(selected_id):
+                reply = build_category_reply(selected_id, from_number)
+                send_text_message(from_number, reply)
+            elif selected_id:
+                send_text_message(from_number, NOT_FOUND_MESSAGE)
 
     except (KeyError, IndexError) as e:
         print("No message content to process:", e)
@@ -441,6 +539,11 @@ def submit_trader():
         traders.append(new_trader)
         save_traders(traders)
 
+        try:
+            send_text_message(new_trader["whatsapp"], TRADER_THANK_YOU_TEXT)
+        except Exception as send_err:
+            print("Thank-you message failed (non-fatal):", send_err)
+
         return jsonify({"status": "ok"}), 200
     except Exception as e:
         print("Submit error:", e)
@@ -457,6 +560,7 @@ ADMIN_PAGE = """
 <head>
 <meta charset="UTF-8">
 <title>إدارة دليل السجانة</title>
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
 <style>
   body{{font-family:Arial,sans-serif; background:#EAE4D9; color:#24272B; padding:24px;}}
   h1{{font-size:1.4rem;}} h2{{font-size:1.1rem; margin-top:36px;}}
@@ -485,10 +589,21 @@ ADMIN_PAGE = """
   .save-btn{{background:#3f7a4d; color:#fff; margin-top:18px; padding:10px 18px;}}
   .badge{{padding:2px 8px; border-radius:100px; font-size:0.75rem;}}
   .b-priority{{background:#f1dfa8;}} .b-normal{{background:#dfe3e2;}} .b-frozen{{background:#ddd;}}
+  .stats-bar{{display:flex; gap:16px; margin:14px 0 24px; flex-wrap:wrap;}}
+  .stat-box{{background:#24272B; color:#fff; padding:12px 20px; border-radius:6px; font-size:0.9rem;}}
+  .stat-box b{{display:block; font-size:1.4rem; color:#e8b98a;}}
 </style>
 </head>
 <body>
-<h1>لوحة إدارة دليل السجانة</h1>
+<div class="logo-header" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+  <img src="/static/logo.png" alt="شعار" style="height:36px;width:36px;object-fit:contain;">
+  <h1 style="margin:0;">لوحة إدارة دليل السجانة</h1>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-box">رسائل اليوم<b>{msgs_today}</b></div>
+  <div class="stat-box">إجمالي الرسائل<b>{msgs_total}</b></div>
+</div>
 
 <h2>تسجيلات قيد المراجعة ({pending_count})</h2>
 {pending_table}
@@ -610,6 +725,8 @@ def admin_page():
         for c in categories
     )
 
+    stats = get_message_stats()
+
     return ADMIN_PAGE.format(
         pending_count=len(pending),
         pending_table=pending_table,
@@ -617,6 +734,8 @@ def admin_page():
         approved_table=approved_table,
         key=key,
         categories_list=categories_list,
+        msgs_today=stats["today"],
+        msgs_total=stats["total"],
     )
 
 
