@@ -3,133 +3,367 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تسجيل تاجر — دليل السجانة</title>
+<title>دليل السجانة — دليل تجار سوق مواد البناء عبر واتساب</title>
+<meta name="description" content="دليل السجانة يربط تجار سوق السجانة بالخرطوم بالمتسوقين مباشرة عبر واتساب — اكتب الصنف اللي بتدور عليه ونوصلك بأقرب تاجر متخصص.">
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
-<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --sand:#EAE4D9; --steel:#24272B; --steel-soft:#454B50;
-    --rust:#A6502F; --paper:#F5F1E8; --line: rgba(36,39,43,0.16);
+    --sand:#EAE4D9;
+    --sand-2:#E1DACB;
+    --steel:#24272B;
+    --steel-soft:#454B50;
+    --rust:#A6502F;
+    --rust-deep:#7E3A20;
+    --zinc:#5C6B6E;
+    --zinc-light:#8FA0A2;
+    --paper:#F5F1E8;
+    --line: rgba(36,39,43,0.14);
+    --radius: 4px;
   }
   *{box-sizing:border-box;}
-  body{margin:0; background:var(--sand); color:var(--steel); font-family:'IBM Plex Sans Arabic',sans-serif; line-height:1.7;}
-  .wrap{max-width:640px; margin:0 auto; padding:48px 20px 80px;}
-  h1.display{font-family:'Lalezar',sans-serif; font-weight:400; font-size:2.2rem; margin:0 0 8px;}
-  .sub{color:var(--steel-soft); margin:0 0 36px;}
-  form{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:28px;}
-  label{display:block; font-weight:600; margin:0 0 8px; font-size:0.95rem;}
-  .field{margin-bottom:22px;}
-  input, select{
-    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:4px;
-    font-family:inherit; font-size:1rem; background:#fff; color:var(--steel);
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--sand);
+    color:var(--steel);
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    line-height:1.7;
+    -webkit-font-smoothing:antialiased;
   }
-  input:focus, select:focus{outline:2px solid var(--rust); outline-offset:1px;}
-  .hint{font-size:0.85rem; color:var(--steel-soft); margin-top:6px;}
-  button{
-    width:100%; padding:14px; background:var(--steel); color:var(--paper);
-    border:none; border-radius:4px; font-size:1.05rem; font-weight:700; cursor:pointer;
-    font-family:inherit;
+  a{color:inherit;}
+  .display{font-family:'Lalezar', sans-serif; font-weight:400; letter-spacing:0.5px;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+
+  :focus-visible{
+    outline: 3px solid var(--rust);
+    outline-offset: 3px;
   }
-  button:hover{background:var(--rust);}
-  button:disabled{opacity:0.6; cursor:not-allowed;}
-  #msg{margin-top:18px; padding:14px; border-radius:4px; display:none; font-size:0.95rem;}
-  #msg.ok{display:block; background:#e4efe6; color:#2c5a36; border:1px solid #b9d8bf;}
-  #msg.err{display:block; background:#f6e3df; color:#7e3a20; border:1px solid #e0b5a8;}
-  a.back{display:inline-block; margin-bottom:24px; color:var(--steel-soft); text-decoration:none; font-size:0.9rem;}
-  .logo-header{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
-  .logo-header img{height:56px; width:56px; object-fit:contain;}
+
+  .wrap{max-width:1100px; margin:0 auto; padding:0 24px;}
+
+  /* ---------- NAV ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(234,228,217,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  nav.wrap{
+    display:flex; align-items:center; justify-content:space-between;
+    height:68px;
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-size:1.4rem;}
+  .brand .dot{width:10px;height:10px;background:var(--rust);border-radius:2px; transform:rotate(45deg); flex:none;}
+  .brand img{height:52px; width:52px; object-fit:contain; flex:none;}
+  nav .links{display:flex; gap:28px; font-size:0.95rem;}
+  nav .links a{text-decoration:none; opacity:0.8; transition:opacity .15s;}
+  nav .links a:hover{opacity:1;}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--steel); color:var(--paper);
+    padding:11px 20px; border-radius:var(--radius);
+    text-decoration:none; font-size:0.92rem; font-weight:600;
+    border:1px solid var(--steel);
+    transition: transform .12s ease, background .15s ease;
+  }
+  .btn:hover{background:var(--rust); border-color:var(--rust); transform:translateY(-1px);}
+  .btn.ghost{background:transparent; color:var(--steel); border:1px solid var(--steel);}
+  .btn.ghost:hover{background:var(--steel); color:var(--paper);}
+  @media (max-width:720px){ nav .links{display:none;} }
+
+  /* ---------- HERO ---------- */
+  .hero{padding:72px 0 0;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem;
+    letter-spacing:0.06em; color:var(--rust-deep);
+    background:rgba(166,80,47,0.08);
+    border:1px solid rgba(166,80,47,0.3);
+    padding:5px 12px; border-radius:100px;
+    margin-bottom:22px;
+  }
+  h1.display{
+    font-size:clamp(2.6rem, 6vw, 4.4rem);
+    line-height:1.15;
+    margin:0 0 20px;
+  }
+  h1.display span{color:var(--rust);}
+  .hero p.lede{
+    max-width:640px; font-size:1.15rem; color:var(--steel-soft); margin:0 0 34px;
+  }
+  .hero-ctas{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:56px;}
+
+  /* ---------- TICKER (signature element) ---------- */
+  .ticker-block{
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    background: var(--steel);
+    overflow:hidden;
+    position:relative;
+  }
+  .ticker-label{
+    position:absolute; right:0; top:0; bottom:0;
+    display:flex; align-items:center;
+    background:var(--rust);
+    color:var(--paper);
+    padding:0 16px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.75rem;
+    letter-spacing:0.05em;
+    z-index:2;
+    white-space:nowrap;
+  }
+  .ticker-track-outer{
+    padding-right:150px;
+    overflow:hidden;
+  }
+  .ticker-track{
+    display:flex;
+    width:max-content;
+    animation: ticker 32s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{animation:none;}
+  }
+  .ticker-track span{
+    font-family:'IBM Plex Mono', monospace;
+    color:#D8D2C4;
+    font-size:0.95rem;
+    padding:16px 28px;
+    white-space:nowrap;
+    border-left:1px solid rgba(255,255,255,0.12);
+  }
+  .ticker-track span b{color:#fff; font-weight:600;}
+  @keyframes ticker{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+
+  /* ---------- SECTION SHARED ---------- */
+  section{padding:88px 0;}
+  .section-head{max-width:620px; margin-bottom:48px;}
+  .kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem;
+    color:var(--zinc); letter-spacing:0.08em; margin-bottom:10px; display:block;
+  }
+  h2.display{font-size:clamp(1.8rem,3.6vw,2.6rem); margin:0 0 14px;}
+  .section-head p{color:var(--steel-soft); font-size:1.05rem; margin:0;}
+
+  /* how it works - numbered because it IS a real sequence */
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:2px; background:var(--line); border:1px solid var(--line);}
+  .step{background:var(--paper); padding:32px 26px;}
+  .step .num{font-family:'IBM Plex Mono',monospace; color:var(--rust); font-size:0.85rem; margin-bottom:14px; display:block;}
+  .step h3{font-size:1.15rem; margin:0 0 10px;}
+  .step p{margin:0; color:var(--steel-soft); font-size:0.96rem;}
+  @media (max-width:760px){ .steps{grid-template-columns:1fr;} }
+
+  /* traders section */
+  .traders{background:var(--sand-2);}
+  .traders-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:56px; align-items:center;}
+  @media (max-width:820px){ .traders-grid{grid-template-columns:1fr; gap:36px;} }
+  .benefit-list{list-style:none; margin:0 0 32px; padding:0;}
+  .benefit-list li{
+    display:flex; gap:14px; padding:16px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .benefit-list li:last-child{border-bottom:none;}
+  .benefit-list .mark{
+    flex:none; width:26px; height:26px; border-radius:2px;
+    background:var(--rust); color:#fff; display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:0.8rem; transform:rotate(2deg);
+  }
+  .benefit-list div b{display:block; margin-bottom:2px;}
+  .benefit-list div span{color:var(--steel-soft); font-size:0.93rem;}
+
+  .price-card{
+    background:var(--steel); color:var(--paper);
+    border-radius:var(--radius); padding:28px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .price-card .head{
+    display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px dashed rgba(255,255,255,0.25);
+    padding-bottom:14px; margin-bottom:14px;
+    font-size:0.8rem; color:#B9BEC0;
+  }
+  .price-card .row{display:flex; justify-content:space-between; padding:9px 0; font-size:0.92rem; border-bottom:1px solid rgba(255,255,255,0.08);}
+  .price-card .row b{color:var(--rust)}
+  .price-card .row:last-child{border-bottom:none;}
+  .price-card .cta-line{margin-top:18px; font-size:0.85rem; color:#D8D2C4;}
+
+  /* mission / story */
+  .story{
+    display:grid; grid-template-columns:0.9fr 1.1fr; gap:56px; align-items:start;
+  }
+  @media (max-width:820px){ .story{grid-template-columns:1fr;} }
+  .story blockquote{
+    margin:0; font-family:'Lalezar', sans-serif; font-size:1.5rem; line-height:1.5;
+    color:var(--rust-deep); border-right:4px solid var(--rust); padding-right:20px;
+  }
+  .story .body p{color:var(--steel-soft); font-size:1.02rem;}
+
+  /* footer */
+  footer{
+    background:var(--steel); color:#C9C4B7; padding:56px 0 32px;
+  }
+  footer .wrap{display:flex; flex-wrap:wrap; gap:40px; justify-content:space-between;}
+  footer h4{color:#fff; font-size:1rem; margin:0 0 14px;}
+  footer .col{min-width:200px;}
+  footer a.foot-link{display:block; text-decoration:none; color:#C9C4B7; opacity:0.85; margin-bottom:8px; font-size:0.92rem;}
+  footer a.foot-link:hover{opacity:1; color:#fff;}
+  .foot-bottom{
+    margin-top:44px; padding-top:24px; border-top:1px solid rgba(255,255,255,0.12);
+    font-size:0.82rem; color:#9A9587; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <a class="back" href="/">← رجوع للصفحة الرئيسية</a>
-  <div class="logo-header"><img src="/static/logo.png" alt="شعار واتساب السجانة"></div>
-  <h1 class="display">سجّل محلك في الدليل</h1>
-  <p class="sub">املا بياناتك وهنتواصل معاك عبر واتساب لتفعيل حسابك خلال يوم أو اتنين.</p>
 
-  <form id="traderForm">
-    <div class="field">
-      <label for="name">اسم التاجر / المحل</label>
-      <input type="text" id="name" name="name" required>
+<header>
+  <nav class="wrap">
+    <div class="brand display"><img src="/static/logo.png" alt="شعار واتساب السجانة"> دليل السجانة</div>
+    <div class="links">
+      <a href="#how">كيف يعمل</a>
+      <a href="#traders">للتجار</a>
+      <a href="#story">عن المشروع</a>
+    </div>
+    <a class="btn" href="https://wa.me/201554042773" target="_blank" rel="noopener">تواصل عبر واتساب</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <span class="eyebrow">خدمة مجتمعية لسوق السجانة — الخرطوم</span>
+      <h1 class="display">تدور على تاجر؟<br><span>واتساب واحد يوصلك بيه.</span></h1>
+      <p class="lede">دليل السجانة بيربط المتسوقين بتجار مواد البناء في السوق مباشرة عبر واتساب — تكتب اسم الصنف اللي محتاجه، ونوصلك بأقرب تاجر متخصص، بدون ما تلف كل السوق.</p>
+      <div class="hero-ctas">
+        <a class="btn" href="https://wa.me/201554042773" target="_blank" rel="noopener">جرّب الدليل الآن</a>
+        <a class="btn ghost" href="#traders">أنا تاجر، عايز أنضم</a>
+      </div>
     </div>
 
-    <div class="field">
-      <label for="whatsapp">رقم الواتساب</label>
-      <input type="tel" id="whatsapp" name="whatsapp" placeholder="249912345678" required>
-      <div class="hint">اكتب الرقم بالكامل مع مفتاح الدولة، بدون علامة +</div>
+    <div class="ticker-block" aria-hidden="true">
+      <div class="ticker-label">تخصصات الدليل</div>
+      <div class="ticker-track-outer">
+        <div class="ticker-track">
+          <span>#<b>سيراميك</b> وبورسلين</span>
+          <span>#<b>اسمنت</b> وخرسانة</span>
+          <span>#<b>حديد</b> تسليح</span>
+          <span>#<b>كهرباء</b> ومصنعيات</span>
+          <span>#<b>سباكة</b> ومواسير</span>
+          <span>#<b>ديكورات</b> وجبس</span>
+          <span>#<b>سيراميك</b> وبورسلين</span>
+          <span>#<b>اسمنت</b> وخرسانة</span>
+          <span>#<b>حديد</b> تسليح</span>
+          <span>#<b>كهرباء</b> ومصنعيات</span>
+          <span>#<b>سباكة</b> ومواسير</span>
+          <span>#<b>ديكورات</b> وجبس</span>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="field">
-      <label for="specialty">التخصص</label>
-      <select id="specialty" name="specialty" required>
-        <option value="">اختر التخصص</option>
-        <!--CATEGORY_OPTIONS-->
-      </select>
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">// كيف يعمل</span>
+        <h2 class="display">من السؤال للتاجر في ثلاث خطوات</h2>
+        <p>نفس الطريقة اللي اتعودت عليها في السوق، بس من موبايلك.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="num">01</span>
+          <h3>اكتب الصنف</h3>
+          <p>ابعت رسالة واتساب واكتب اسم اللي بتدور عليه — سيراميك، اسمنت، حديد، أو أي تخصص تاني.</p>
+        </div>
+        <div class="step">
+          <span class="num">02</span>
+          <h3>نوصلك بالتاجر</h3>
+          <p>هترد عليك رسالة فيها اسم التاجر المتخصص، رقمه المباشر، وموقع محله بالظبط في السوق.</p>
+        </div>
+        <div class="step">
+          <span class="num">03</span>
+          <h3>تواصل وابدأ التعامل</h3>
+          <p>تكلم التاجر على طول، تتفاوض على السعر وتكمل عملية الشراء زي ما اتعودت تماماً.</p>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="field">
-      <label for="details">كل المنتجات اللي بتبيعها بالتفصيل</label>
-      <input type="text" id="details" name="details" placeholder="مثال: سيراميك إسباني، بورسلين، لاصق سيراميك، أدوات تركيب" required>
-      <div class="hint">اكتب كل حاجة بتبيعها مش بس التخصص الأساسي — ده بيساعدنا نوصلك بأكبر عدد زبائن حتى لو سألوا عن منتج تفصيلي</div>
+  <section id="traders" class="traders">
+    <div class="wrap">
+      <div class="traders-grid">
+        <div>
+          <span class="kicker">// للتجار</span>
+          <h2 class="display" style="margin-bottom:26px;">خلي زباينك يلاقوك بضغطة واحدة</h2>
+          <ul class="benefit-list">
+            <li>
+              <span class="mark">١</span>
+              <div><b>وصول مباشر لزبائن جدد</b><span>ناس بره السوق وبره الخرطوم بيقدروا يوصلوا لمحلك من غير ما يعرفوك مسبقاً.</span></div>
+            </li>
+            <li>
+              <span class="mark">٢</span>
+              <div><b>مفيش وسيط في العملية</b><span>الزبون بيتواصل مع رقمك مباشرة، والتفاوض والبيع كله بينك وبينه.</span></div>
+            </li>
+            <li>
+              <span class="mark">٣</span>
+              <div><b>تسجيل بسيط وسريع</b><span>اسمك، تخصصك، رقمك، وموقعك في السوق — كده وبس.</span></div>
+            </li>
+          </ul>
+          <a class="btn" href="https://wa.me/201554042773?text=عايز%20انضم%20لدليل%20السجانة" target="_blank" rel="noopener">سجّل محلك في الدليل</a>
+        </div>
+
+        <div class="price-card">
+          <div class="head"><span>دليل_السجانة.تحديث</span><span>مباشر</span></div>
+          <div class="row"><span>سيراميك</span><b>هنادي — شارع سوداتل</b></div>
+          <div class="row"><span>اسمنت</span><b>سحر — شارع الحرية</b></div>
+          <div class="row"><span>كهرباء</span><b>شروق — شارع البوسنة</b></div>
+          <div class="row"><span>سباكة</span><b>محمد — الملجة</b></div>
+          <div class="row"><span>ديكورات</span><b>ديزاين لاين — شارع النص</b></div>
+          <div class="cta-line">↑ هكذا يظهر ردّنا للزبون خلال ثوانٍ</div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="field">
-      <label for="location">موقع المحل في السوق</label>
-      <input type="text" id="location" name="location" placeholder="مثال: شارع سوداتل" required>
+  <section id="story">
+    <div class="wrap story">
+      <blockquote>"هذا وطني، الخرطوم هي مستقري."</blockquote>
+      <div class="body">
+        <span class="kicker">// عن المشروع</span>
+        <h2 class="display" style="margin-bottom:16px;">سوق بيرجع لنبضه، ودليل بيسهّل الطريق</h2>
+        <p>سوق السجانة من أكبر أسواق مواد البناء والتشييد في السودان، وشهد فترة توقف صعبة قبل ما يبدأ التجار يرجعوا لمحالهم ويعيدوا فتحها من جديد. دليل السجانة اتبنى كخدمة بسيطة تخدم رجوع الحياة للسوق — تسهّل على التاجر إنه يوصل لزبون جديد، وعلى المتسوق إنه يلاقي اللي محتاجه من غير لف وعناء، في وقت السوق والمدينة محتاجين فيه كل تسهيل ممكن.</p>
+      </div>
     </div>
+  </section>
+</main>
 
-    <div class="field">
-      <label for="notes">ملاحظات إضافية (اختياري)</label>
-      <input type="text" id="notes" name="notes">
+<footer>
+  <div class="wrap">
+    <div class="col">
+      <h4 class="display">دليل السجانة</h4>
+      <p style="font-size:0.9rem; max-width:260px; color:#B9BEC0;">دليل تجار سوق مواد البناء بالسجانة — الخرطوم، عبر واتساب.</p>
     </div>
+    <div class="col">
+      <h4>روابط</h4>
+      <a class="foot-link" href="#how">كيف يعمل</a>
+      <a class="foot-link" href="#traders">تسجيل تاجر</a>
+      <a class="foot-link" href="#story">عن المشروع</a>
+    </div>
+    <div class="col">
+      <h4>تواصل</h4>
+      <a class="foot-link" href="https://wa.me/201554042773" target="_blank" rel="noopener">واتساب الدليل</a>
+    </div>
+  </div>
+  <div class="wrap foot-bottom">
+    <span>© دليل السجانة</span>
+    <span>خدمة مجتمعية لتجار ومتسوقي سوق السجانة</span>
+  </div>
+</footer>
 
-    <button type="submit" id="submitBtn">إرسال التسجيل</button>
-    <div id="msg"></div>
-  </form>
-</div>
-
-<script>
-document.getElementById('traderForm').addEventListener('submit', async function(e){
-  e.preventDefault();
-  const btn = document.getElementById('submitBtn');
-  const msg = document.getElementById('msg');
-  btn.disabled = true;
-  btn.textContent = 'جاري الإرسال...';
-  msg.style.display = 'none';
-
-  const data = {
-    name: document.getElementById('name').value,
-    whatsapp: document.getElementById('whatsapp').value,
-    specialty: document.getElementById('specialty').value,
-    details: document.getElementById('details').value,
-    location: document.getElementById('location').value,
-    notes: document.getElementById('notes').value,
-  };
-
-  try{
-    const res = await fetch('/submit-trader', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if(result.status === 'ok'){
-      msg.className = 'ok';
-      msg.textContent = 'تم التسجيل بنجاح! هنتواصل معاك قريباً عبر واتساب.';
-      msg.style.display = 'block';
-      document.getElementById('traderForm').reset();
-    } else {
-      throw new Error(result.message || 'حدث خطأ');
-    }
-  } catch(err){
-    msg.className = 'err';
-    msg.textContent = 'حصلت مشكلة في الإرسال، حاول تاني أو تواصل معانا مباشرة عبر واتساب.';
-    msg.style.display = 'block';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'إرسال التسجيل';
-  }
-});
-</script>
 </body>
 </html>
