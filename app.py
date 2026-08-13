@@ -36,25 +36,25 @@ PRIORITY_SLOTS = 2
 
 JOIN_ROW_ID = "cat_join_trader"
 
-WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص اللي بتدور عليه من القائمة تحت:"
+WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص الذي تبحث عنه من القائمة تحت:"
 NOT_FOUND_MESSAGE = (
-    "ما لقيتش تخصص مطابق 🤔\n"
-    "اكتب اسم التخصص، أو اكتب \"قائمة\" عشان تشوف كل الخيارات."
+    "ما في تخصص مطابق 🤔\n"
+    "اكتب اسم التخصص، أو اكتب كلمة \"قائمة\" عشان تشوف كل الخيارات."
 )
-EMPTY_CATEGORY_MESSAGE = "لسه مفيش تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
+EMPTY_CATEGORY_MESSAGE = "لسه مافي تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
 LIMIT_REACHED_MESSAGE = (
-    "وصلت للحد الأقصى من الرسائل المسموحة النهاردة 🙏\n"
+    "وصلت للحد الأقصى من الرسائل المسموحة اليوم  🙏\n"
     "جرب تاني بكرة، أو لو الموضوع مستعجل تواصل معانا مباشرة."
 )
 JOIN_REPLY_TEXT = (
     f"يسعدنا انضمامك لدليل السجانة! 🎉\n"
     f"سجّل بياناتك من الرابط ده (يستغرق دقيقة بس):\n{REGISTER_URL}"
 )
-ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف اللي بتدور عليه، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
+ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف الذي تبحث عنه، أو اكتب كلمة \"قائمة\" عشان تشوف كل التخصصات."
 TRADER_THANK_YOU_TEXT = (
     "شكراً لتسجيلك في دليل السجانة! 🎉\n"
-    "طلبك دلوقتي قيد المراجعة، وهنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
-    "لو حابب تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
+    "طلبك الان قيد المراجعة، وسنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "لو حابي تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
 ROLE_TRADER_ID = "role_trader"
@@ -95,11 +95,11 @@ DEFAULT_CATEGORIES = [
 DEFAULT_TRADERS = [
     {"id": "t1", "name": "ديزاين لاين", "whatsapp": "249912351105", "category_id": "cat_decor",
      "location": "شارع النص", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t2", "name": "هنادي", "whatsapp": "966562762669", "category_id": "cat_ceramic",
+    {"id": "t2", "name": "حسين", "whatsapp": "966562762669", "category_id": "cat_ceramic",
      "location": "شارع سوداتل", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t3", "name": "سحر", "whatsapp": "249918213703", "category_id": "cat_cement",
+    {"id": "t3", "name": "سامي", "whatsapp": "249918213703", "category_id": "cat_cement",
      "location": "شارع الحرية", "details": "", "status": "approved", "visibility": "normal"},
-    {"id": "t4", "name": "شروق", "whatsapp": "249927382171", "category_id": "cat_electric",
+    {"id": "t4", "name": "شوقي", "whatsapp": "249927382171", "category_id": "cat_electric",
      "location": "شارع البوسنة", "details": "", "status": "approved", "visibility": "normal"},
     {"id": "t5", "name": "محمد", "whatsapp": "249123091999", "category_id": "cat_plumbing",
      "location": "الملجة", "details": "", "status": "approved", "visibility": "normal"},
@@ -372,11 +372,11 @@ def send_role_question(to_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، مين حضرتك؟"},
+            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، عرفنا بنفسك تاجر ام زبون؟"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": ROLE_TRADER_ID, "title": "🔧 أنا تاجر"}},
-                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "🛒 أنا عميل"}},
+                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "أنا زبون"}},
                 ]
             },
         },
@@ -515,6 +515,60 @@ def register_page():
     return html
 
 
+@app.route("/check", methods=["GET"])
+def check_page():
+    with open(os.path.join(BASE_DIR, "templates", "check.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+def normalize_phone(raw):
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if digits.startswith("00"):
+        digits = digits[2:]
+    return digits
+
+
+@app.route("/api/check-trader", methods=["GET"])
+def api_check_trader():
+    phone_raw = request.args.get("whatsapp", "").strip()
+    name_query = request.args.get("name", "").strip().lower()
+
+    if not phone_raw and not name_query:
+        return jsonify({"found": False, "matches": []})
+
+    traders = get_traders()
+    cat_title = {c["id"]: c["title"] for c in get_categories()}
+    matches = []
+
+    if phone_raw:
+        phone_norm = normalize_phone(phone_raw)
+        suffix = phone_norm[-9:] if len(phone_norm) >= 9 else phone_norm
+        for t in traders:
+            t_phone = normalize_phone(t.get("whatsapp", ""))
+            if t_phone == phone_norm or (suffix and t_phone.endswith(suffix)):
+                matches.append(t)
+    elif name_query:
+        for t in traders:
+            if name_query in t.get("name", "").lower():
+                matches.append(t)
+
+    if not matches:
+        return jsonify({"found": False, "matches": []})
+
+    results = [
+        {
+            "status": t.get("status", "pending"),
+            "name": t.get("name", ""),
+            "whatsapp": t.get("whatsapp", ""),
+            "category": cat_title.get(t.get("category_id"), ""),
+            "details": t.get("details", ""),
+            "location": t.get("location", ""),
+        }
+        for t in matches
+    ]
+    return jsonify({"found": True, "matches": results})
+
+
 @app.route("/submit-trader", methods=["POST"])
 def submit_trader():
     try:
@@ -592,7 +646,27 @@ ADMIN_PAGE = """
   .stats-bar{{display:flex; gap:16px; margin:14px 0 24px; flex-wrap:wrap;}}
   .stat-box{{background:#24272B; color:#fff; padding:12px 20px; border-radius:6px; font-size:0.9rem;}}
   .stat-box b{{display:block; font-size:1.4rem; color:#e8b98a;}}
+  .search-box{{margin:14px 0; display:flex; gap:8px; max-width:420px;}}
+  .search-box input{{flex:1; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:0.95rem;}}
+  .search-box button{{background:#24272B; color:#fff; padding:10px 16px;}}
+  .bulk-bar{{margin:10px 0; padding:8px; background:#dfe3e2; border-radius:4px;}}
 </style>
+<script>
+function toggleAll(cls, check){{
+  document.querySelectorAll('.' + cls).forEach(function(cb){{ cb.checked = check; }});
+}}
+function submitBulk(cls, hiddenId, action){{
+  var ids = [];
+  document.querySelectorAll('.' + cls + ':checked').forEach(function(cb){{ ids.push(cb.value); }});
+  if(ids.length === 0){{ alert('اختار عنصر واحد على الأقل'); return false; }}
+  document.getElementById(hiddenId).value = ids.join(',');
+  var form = document.getElementById(hiddenId).closest('form');
+  var actionInput = document.createElement('input');
+  actionInput.type = 'hidden'; actionInput.name = 'bulk_action'; actionInput.value = action;
+  form.appendChild(actionInput);
+  return true;
+}}
+</script>
 </head>
 <body>
 <div class="logo-header" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
@@ -605,11 +679,20 @@ ADMIN_PAGE = """
   <div class="stat-box">إجمالي الرسائل<b>{msgs_total}</b></div>
 </div>
 
+<form class="search-box" method="GET" action="/admin">
+  <input type="hidden" name="key" value="{key}">
+  <input type="text" name="q" placeholder="ابحث بالاسم، الرقم، التخصص، أو التفاصيل" value="{search_query}">
+  <button type="submit">بحث</button>
+</form>
+
 <h2>تسجيلات قيد المراجعة ({pending_count})</h2>
 {pending_table}
 
 <h2>كل التجار المعتمدين ({approved_count})</h2>
 {approved_table}
+
+<h2>إحصائيات التجار حسب التخصص</h2>
+{category_stats_table}
 
 <h2>إضافة تخصص جديد</h2>
 <form class="add-form" method="POST" action="/admin/add-category">
@@ -638,12 +721,23 @@ def admin_page():
     if key != ADMIN_KEY:
         return "غير مصرح — مفتاح الدخول غلط", 403
 
+    search_query = request.args.get("q", "").strip().lower()
+
     traders = get_traders()
     categories = get_categories()
     cat_title = {c["id"]: c["title"] for c in categories}
 
-    pending = [t for t in traders if t.get("status") == "pending"]
-    approved = [t for t in traders if t.get("status") == "approved"]
+    def matches_search(t):
+        if not search_query:
+            return True
+        haystack = " ".join([
+            t.get("name", ""), t.get("whatsapp", ""),
+            cat_title.get(t.get("category_id"), ""), t.get("details", ""),
+        ]).lower()
+        return search_query in haystack
+
+    pending = [t for t in traders if t.get("status") == "pending" and matches_search(t)]
+    approved = [t for t in traders if t.get("status") == "approved" and matches_search(t)]
 
     if not pending:
         pending_table = '<p class="empty">مفيش تسجيلات جديدة قيد المراجعة.</p>'
@@ -652,6 +746,7 @@ def admin_page():
         for t in pending:
             rows += f"""
             <tr>
+              <td><input type="checkbox" class="row-check pending-check" value="{t['id']}"></td>
               <td>{t.get('name','')}</td><td>{t.get('whatsapp','')}</td>
               <td>{t.get('category_id','')} ({cat_title.get(t.get('category_id'),'')})</td>
               <td>{t.get('details','')}</td><td>{t.get('location','')}</td>
@@ -671,8 +766,19 @@ def admin_page():
                 </form>
               </td>
             </tr>"""
-        pending_table = f"""<table><tr>
-          <th>الاسم</th><th>واتساب</th><th>التخصص</th><th>التفاصيل</th><th>الموقع</th><th>إجراء</th>
+        pending_table = f"""
+        <div class="bulk-bar">
+          <button type="button" class="btn-link" onclick="toggleAll('pending-check', true)">تحديد الكل</button>
+          <button type="button" class="btn-link" onclick="toggleAll('pending-check', false)">إلغاء التحديد</button>
+          <form class="inline" method="POST" action="/admin/bulk-action" id="bulkPendingForm">
+            <input type="hidden" name="key" value="{key}">
+            <input type="hidden" name="ids" id="bulkPendingIds">
+            <button type="submit" class="approve" onclick="return submitBulk('pending-check','bulkPendingIds','approve')">موافقة على المحدد</button>
+            <button type="submit" class="reject" onclick="return submitBulk('pending-check','bulkPendingIds','reject')">رفض المحدد</button>
+          </form>
+        </div>
+        <table><tr>
+          <th></th><th>الاسم</th><th>واتساب</th><th>التخصص</th><th>التفاصيل</th><th>الموقع</th><th>إجراء</th>
         </tr>{rows}</table>"""
 
     if not approved:
@@ -683,6 +789,7 @@ def admin_page():
             vis = t.get("visibility", "normal")
             rows += f"""
             <tr>
+              <td><input type="checkbox" class="row-check approved-check" value="{t['id']}"></td>
               <td>{t.get('name','')}</td><td>{t.get('whatsapp','')}</td>
               <td>{cat_title.get(t.get('category_id'),'')}</td>
               <td>{visibility_badge(vis)}</td>
@@ -715,8 +822,21 @@ def admin_page():
                 </form>
               </td>
             </tr>"""
-        approved_table = f"""<table><tr>
-          <th>الاسم</th><th>واتساب</th><th>التخصص</th><th>الحالة</th><th>إجراء</th>
+        approved_table = f"""
+        <div class="bulk-bar">
+          <button type="button" class="btn-link" onclick="toggleAll('approved-check', true)">تحديد الكل</button>
+          <button type="button" class="btn-link" onclick="toggleAll('approved-check', false)">إلغاء التحديد</button>
+          <form class="inline" method="POST" action="/admin/bulk-action" id="bulkApprovedForm">
+            <input type="hidden" name="key" value="{key}">
+            <input type="hidden" name="ids" id="bulkApprovedIds">
+            <button type="submit" class="priority" onclick="return submitBulk('approved-check','bulkApprovedIds','priority')">أولوية للمحدد</button>
+            <button type="submit" class="normal" onclick="return submitBulk('approved-check','bulkApprovedIds','normal')">عادي للمحدد</button>
+            <button type="submit" class="frozen" onclick="return submitBulk('approved-check','bulkApprovedIds','frozen')">تجميد المحدد</button>
+            <button type="submit" class="delete" onclick="return confirm('متأكد من حذف كل العناصر المحددة؟') && submitBulk('approved-check','bulkApprovedIds','delete')">حذف المحدد</button>
+          </form>
+        </div>
+        <table><tr>
+          <th></th><th>الاسم</th><th>واتساب</th><th>التخصص</th><th>الحالة</th><th>إجراء</th>
         </tr>{rows}</table>"""
 
     categories_list = "".join(
@@ -724,6 +844,14 @@ def admin_page():
         f'<a class="btn-link" href="/admin/edit-category?key={key}&id={c["id"]}">تعديل</a></span>'
         for c in categories
     )
+
+    # جدول إحصائيات التجار حسب التخصص
+    approved_all = [t for t in traders if t.get("status") == "approved"]
+    stats_rows = ""
+    for c in categories:
+        count = sum(1 for t in approved_all if t.get("category_id") == c["id"])
+        stats_rows += f"<tr><td>{c['title']}</td><td>{count}</td></tr>"
+    category_stats_table = f"""<table><tr><th>التخصص</th><th>عدد التجار</th></tr>{stats_rows}</table>"""
 
     stats = get_message_stats()
 
@@ -736,6 +864,8 @@ def admin_page():
         categories_list=categories_list,
         msgs_today=stats["today"],
         msgs_total=stats["total"],
+        search_query=search_query,
+        category_stats_table=category_stats_table,
     )
 
 
@@ -758,6 +888,37 @@ def admin_trader_action():
                     t["status"] = "approved"
                 elif action == "reject":
                     t["status"] = "rejected"
+    save_traders(traders)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+@app.route("/admin/bulk-action", methods=["POST"])
+def admin_bulk_action():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    ids_raw = request.form.get("ids", "")
+    ids = set(i for i in ids_raw.split(",") if i)
+    bulk_action = request.form.get("bulk_action")
+
+    if not ids or not bulk_action:
+        return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+    traders = get_traders()
+
+    if bulk_action == "delete":
+        traders = [t for t in traders if t["id"] not in ids]
+    elif bulk_action in ("approve", "reject"):
+        new_status = "approved" if bulk_action == "approve" else "rejected"
+        for t in traders:
+            if t["id"] in ids:
+                t["status"] = new_status
+    elif bulk_action in ("priority", "normal", "frozen"):
+        for t in traders:
+            if t["id"] in ids:
+                t["visibility"] = bulk_action
+
     save_traders(traders)
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
