@@ -26,6 +26,10 @@ COUNTERS_FILE = os.path.join(BASE_DIR, "counters.json")
 SHOWN_FILE = os.path.join(BASE_DIR, "shown_history.json")
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
 STATS_FILE = os.path.join(BASE_DIR, "message_stats.json")
+ADS_FILE = os.path.join(BASE_DIR, "ads.json")
+ADS_STATS_FILE = os.path.join(BASE_DIR, "ads_stats.json")
+ADS_UPLOAD_DIR = os.path.join(BASE_DIR, "static", "ads")
+SITE_BASE_URL = "https://mohbab.pythonanywhere.com"
 
 REGISTER_URL = "https://mohbab.pythonanywhere.com/register"
 
@@ -38,23 +42,28 @@ JOIN_ROW_ID = "cat_join_trader"
 
 WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص الذي تبحث عنه من القائمة تحت:"
 NOT_FOUND_MESSAGE = (
-    "ما في تخصص مطابق 🤔\n"
+    "ما لقيتش تخصص مطابق 🤔\n"
     "اكتب اسم التخصص، أو اكتب كلمة \"قائمة\" عشان تشوف كل الخيارات."
 )
 EMPTY_CATEGORY_MESSAGE = "لسه مافي تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
 LIMIT_REACHED_MESSAGE = (
-    "وصلت للحد الأقصى من الرسائل المسموحة اليوم  🙏\n"
+    "وصلت للحد الأقصى من الرسائل المسموحة النهاردة 🙏\n"
     "جرب تاني بكرة، أو لو الموضوع مستعجل تواصل معانا مباشرة."
 )
 JOIN_REPLY_TEXT = (
     f"يسعدنا انضمامك لدليل السجانة! 🎉\n"
     f"سجّل بياناتك من الرابط ده (يستغرق دقيقة بس):\n{REGISTER_URL}"
 )
-ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف الذي تبحث عنه، أو اكتب كلمة \"قائمة\" عشان تشوف كل التخصصات."
+EXISTING_TRADER_REPLY_TEXT = (
+    "أهلاً بيك تاني! 👋 لاحظنا إن رقمك مسجل عندنا بالفعل.\n\n"
+    f"تأكد من بياناتك أو صحّحها من هنا:\n{SITE_BASE_URL}/check\n\n"
+    f"أو لو حابب تسجل محل جديد:\n{REGISTER_URL}"
+)
+ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف اللي بتدور عليه، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
 TRADER_THANK_YOU_TEXT = (
     "شكراً لتسجيلك في دليل السجانة! 🎉\n"
-    "طلبك الان قيد المراجعة، وسنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
-    "لو حابي تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
+    "طلبك دلوقتي قيد المراجعة، وهنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "لو حابب تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
 ROLE_TRADER_ID = "role_trader"
@@ -130,6 +139,7 @@ if not os.path.exists(CATEGORIES_FILE):
     save_json(CATEGORIES_FILE, DEFAULT_CATEGORIES)
 if not os.path.exists(TRADERS_FILE):
     save_json(TRADERS_FILE, DEFAULT_TRADERS)
+os.makedirs(ADS_UPLOAD_DIR, exist_ok=True)
 
 
 def is_new_user(phone_number):
@@ -177,6 +187,71 @@ def get_message_stats():
         "total": stats.get("total", 0),
         "today": stats.get("by_date", {}).get(today, 0),
     }
+
+
+# =========================================================
+# نظام الإعلانات
+# =========================================================
+def get_ads():
+    return load_json(ADS_FILE, [])
+
+
+def save_ads(ads):
+    save_json(ADS_FILE, ads)
+
+
+def get_ad_shown_count_today(ad_id):
+    stats = load_json(ADS_STATS_FILE, {})
+    today = str(date.today())
+    return stats.get(today, {}).get(ad_id, 0)
+
+
+def increment_ad_shown(ad_id):
+    stats = load_json(ADS_STATS_FILE, {})
+    today = str(date.today())
+    stats.setdefault(today, {})
+    stats[today][ad_id] = stats[today].get(ad_id, 0) + 1
+    stats = {k: v for k, v in sorted(stats.items())[-14:]}
+    save_json(ADS_STATS_FILE, stats)
+
+
+def get_active_ad_for_category(category_id):
+    today = date.today()
+    for ad in get_ads():
+        if not ad.get("enabled"):
+            continue
+        if ad.get("scope") == "category" and ad.get("category_id") != category_id:
+            continue
+        try:
+            start = date.fromisoformat(ad["start_date"])
+            end = date.fromisoformat(ad["end_date"]) if ad.get("end_date") else None
+        except (KeyError, ValueError):
+            continue
+        if today < start:
+            continue
+        if end and today > end:
+            continue
+        if get_ad_shown_count_today(ad["id"]) >= ad.get("daily_limit", 0):
+            continue
+        return ad
+    return None
+
+
+def send_ad(to_number, ad):
+    if ad.get("type") == "text":
+        send_text_message(to_number, "📢 " + ad.get("text", ""))
+    elif ad.get("type") == "image":
+        image_url = SITE_BASE_URL + ad.get("image_path", "")
+        headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_number,
+            "type": "image",
+            "image": {"link": image_url, "caption": ad.get("text", "") or None},
+        }
+        response = requests.post(GRAPH_API_URL, headers=headers, json=payload)
+        print("Send ad image status:", response.status_code, response.text)
+    increment_ad_shown(ad["id"])
 
 
 def specialty_to_category_id(specialty_text):
@@ -372,11 +447,11 @@ def send_role_question(to_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، عرفنا بنفسك تاجر ام زبون؟"},
+            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، مين حضرتك؟"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": ROLE_TRADER_ID, "title": "🔧 أنا تاجر"}},
-                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "أنا زبون"}},
+                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "🛒 أنا عميل"}},
                 ]
             },
         },
@@ -409,6 +484,22 @@ def send_list_message(to_number):
     response = requests.post(GRAPH_API_URL, headers=headers, json=payload)
     print("Send list status:", response.status_code, response.text)
     return response
+
+
+def trader_join_reply(phone_number):
+    for t in get_traders():
+        if t.get("whatsapp") == phone_number:
+            return EXISTING_TRADER_REPLY_TEXT
+    return JOIN_REPLY_TEXT
+
+
+def maybe_send_ad(to_number, category_id):
+    ad = get_active_ad_for_category(category_id)
+    if ad:
+        try:
+            send_ad(to_number, ad)
+        except Exception as e:
+            print("Ad send failed (non-fatal):", e)
 
 
 # =========================================================
@@ -459,10 +550,11 @@ def receive_message():
             if kind == "list":
                 send_list_message(from_number)
             elif kind == "join":
-                send_text_message(from_number, JOIN_REPLY_TEXT)
+                send_text_message(from_number, trader_join_reply(from_number))
             elif kind == "category":
                 reply = build_category_reply(value_, from_number)
                 send_text_message(from_number, reply)
+                maybe_send_ad(from_number, value_)
             else:
                 send_text_message(from_number, NOT_FOUND_MESSAGE)
 
@@ -477,15 +569,16 @@ def receive_message():
 
             if selected_id == ROLE_TRADER_ID:
                 set_user_role(from_number, "trader")
-                send_text_message(from_number, JOIN_REPLY_TEXT)
+                send_text_message(from_number, trader_join_reply(from_number))
             elif selected_id == ROLE_CUSTOMER_ID:
                 set_user_role(from_number, "customer")
                 send_text_message(from_number, ASK_PRODUCT_TEXT)
             elif selected_id == JOIN_ROW_ID:
-                send_text_message(from_number, JOIN_REPLY_TEXT)
+                send_text_message(from_number, trader_join_reply(from_number))
             elif selected_id and get_category_by_id(selected_id):
                 reply = build_category_reply(selected_id, from_number)
                 send_text_message(from_number, reply)
+                maybe_send_ad(from_number, selected_id)
             elif selected_id:
                 send_text_message(from_number, NOT_FOUND_MESSAGE)
 
@@ -704,6 +797,55 @@ function submitBulk(cls, hiddenId, action){{
 <h2>التخصصات الحالية</h2>
 <p>{categories_list}</p>
 
+<h2>الإعلانات</h2>
+{ads_table}
+
+<h3>إضافة إعلان جديد</h3>
+<form class="add-form" method="POST" action="/admin/add-ad" enctype="multipart/form-data" style="max-width:480px;">
+  <input type="hidden" name="key" value="{key}">
+
+  <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">نطاق الظهور</label>
+  <select name="scope" style="width:100%;padding:8px;margin-bottom:10px;">
+    <option value="category">مع تخصص محدد بس</option>
+    <option value="global">مع كل رد (عام)</option>
+  </select>
+
+  <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">التخصص (لو الإعلان مخصص لتخصص)</label>
+  <select name="category_id" style="width:100%;padding:8px;margin-bottom:10px;">
+    {category_select_options}
+  </select>
+
+  <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">نوع الإعلان</label>
+  <select name="ad_type" id="adTypeSelect" onchange="toggleAdFields()" style="width:100%;padding:8px;margin-bottom:10px;">
+    <option value="text">نص قصير (٧٠ حرف)</option>
+    <option value="image">صورة (بوستر)</option>
+  </select>
+
+  <div id="adTextField">
+    <input type="text" name="text" maxlength="70" placeholder="نص الإعلان (حتى 70 حرف)">
+  </div>
+  <div id="adImageField" style="display:none;">
+    <input type="file" name="image" accept="image/*">
+    <input type="text" name="text" maxlength="70" placeholder="تعليق مختصر تحت الصورة (اختياري)">
+  </div>
+
+  <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">أقصى عدد ظهور يومياً</label>
+  <input type="number" name="daily_limit" value="20" min="1" style="margin-bottom:10px;">
+
+  <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">مدة الحملة (بالأيام)</label>
+  <input type="number" name="duration_days" value="7" min="1" style="margin-bottom:14px;">
+
+  <button class="approve" type="submit">إضافة الإعلان</button>
+</form>
+
+<script>
+function toggleAdFields(){{
+  var type = document.getElementById('adTypeSelect').value;
+  document.getElementById('adTextField').style.display = (type === 'text') ? 'block' : 'none';
+  document.getElementById('adImageField').style.display = (type === 'image') ? 'block' : 'none';
+}}
+</script>
+
 </body>
 </html>
 """
@@ -855,6 +997,45 @@ def admin_page():
 
     stats = get_message_stats()
 
+    category_select_options = "".join(
+        f'<option value="{c["id"]}">{c["title"]}</option>' for c in categories
+    )
+
+    ads = get_ads()
+    if not ads:
+        ads_table = '<p class="empty">مفيش إعلانات مضافة لسه.</p>'
+    else:
+        rows = ""
+        for ad in ads:
+            scope_label = "عام (كل التخصصات)" if ad.get("scope") == "global" else cat_title.get(ad.get("category_id"), "-")
+            preview = ad.get("text", "") if ad.get("type") == "text" else f'<img src="{ad.get("image_path","")}" style="max-height:50px;">'
+            status_label = "مفعّل ✅" if ad.get("enabled") else "متوقف ⏸"
+            shown_today = get_ad_shown_count_today(ad["id"])
+            rows += f"""
+            <tr>
+              <td>{scope_label}</td>
+              <td>{preview}</td>
+              <td>{shown_today} / {ad.get('daily_limit','-')}</td>
+              <td>{ad.get('start_date','')} → {ad.get('end_date','')}</td>
+              <td>{status_label}</td>
+              <td>
+                <form class="inline" method="POST" action="/admin/toggle-ad">
+                  <input type="hidden" name="key" value="{key}">
+                  <input type="hidden" name="id" value="{ad['id']}">
+                  <button class="normal" type="submit">تفعيل/إيقاف</button>
+                </form>
+                <form class="inline" method="POST" action="/admin/delete-ad"
+                      onsubmit="return confirm('متأكد من حذف الإعلان؟');">
+                  <input type="hidden" name="key" value="{key}">
+                  <input type="hidden" name="id" value="{ad['id']}">
+                  <button class="delete" type="submit">حذف</button>
+                </form>
+              </td>
+            </tr>"""
+        ads_table = f"""<table><tr>
+          <th>النطاق</th><th>المحتوى</th><th>الظهور اليوم</th><th>المدة</th><th>الحالة</th><th>إجراء</th>
+        </tr>{rows}</table>"""
+
     return ADMIN_PAGE.format(
         pending_count=len(pending),
         pending_table=pending_table,
@@ -866,6 +1047,8 @@ def admin_page():
         msgs_total=stats["total"],
         search_query=search_query,
         category_stats_table=category_stats_table,
+        ads_table=ads_table,
+        category_select_options=category_select_options,
     )
 
 
@@ -956,6 +1139,93 @@ def admin_add_category():
     new_id = "cat_c" + uuid.uuid4().hex[:6]
     categories.append({"id": new_id, "title": title, "match": [title]})
     save_json(CATEGORIES_FILE, categories)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+
+
+@app.route("/admin/add-ad", methods=["POST"])
+def admin_add_ad():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    scope = request.form.get("scope", "category")
+    category_id = request.form.get("category_id") if scope == "category" else None
+    ad_type = request.form.get("ad_type", "text")
+    text = request.form.get("text", "").strip()[:70]
+
+    try:
+        daily_limit = max(1, int(request.form.get("daily_limit", 20)))
+        duration_days = max(1, int(request.form.get("duration_days", 7)))
+    except ValueError:
+        daily_limit, duration_days = 20, 7
+
+    ad = {
+        "id": "ad_" + uuid.uuid4().hex[:8],
+        "scope": scope,
+        "category_id": category_id,
+        "type": ad_type,
+        "text": text,
+        "image_path": "",
+        "enabled": True,
+        "daily_limit": daily_limit,
+        "start_date": str(date.today()),
+        "end_date": str(date.fromordinal(date.today().toordinal() + duration_days)),
+    }
+
+    if ad_type == "image":
+        file = request.files.get("image")
+        if file and file.filename:
+            ext = file.filename.rsplit(".", 1)[-1].lower()
+            if ext not in ALLOWED_IMAGE_EXTENSIONS:
+                return "امتداد الصورة غير مدعوم (استخدم png أو jpg أو webp)", 400
+            filename = "ad_" + uuid.uuid4().hex[:10] + "." + ext
+            file.save(os.path.join(ADS_UPLOAD_DIR, filename))
+            ad["image_path"] = f"/static/ads/{filename}"
+        else:
+            return "لازم ترفع صورة لإعلان من نوع صورة", 400
+
+    ads = get_ads()
+    ads.append(ad)
+    save_ads(ads)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+@app.route("/admin/toggle-ad", methods=["POST"])
+def admin_toggle_ad():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    ad_id = request.form.get("id")
+    ads = get_ads()
+    for ad in ads:
+        if ad["id"] == ad_id:
+            ad["enabled"] = not ad.get("enabled", True)
+    save_ads(ads)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+@app.route("/admin/delete-ad", methods=["POST"])
+def admin_delete_ad():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    ad_id = request.form.get("id")
+    ads = get_ads()
+    ad_to_delete = next((a for a in ads if a["id"] == ad_id), None)
+    if ad_to_delete and ad_to_delete.get("image_path"):
+        image_file = os.path.join(BASE_DIR, ad_to_delete["image_path"].lstrip("/"))
+        if os.path.exists(image_file):
+            try:
+                os.remove(image_file)
+            except OSError:
+                pass
+    ads = [a for a in ads if a["id"] != ad_id]
+    save_ads(ads)
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
 
