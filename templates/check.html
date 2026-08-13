@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تأكد من بياناتك — دليل السجانة</title>
+<link rel="icon" type="image/png" href="/static/favicon-32.png">
+<link href="https://fonts.googleapis.com/css2?family=Lalezar&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sand:#EAE4D9; --steel:#24272B; --steel-soft:#454B50;
+    --rust:#A6502F; --paper:#F5F1E8; --line: rgba(36,39,43,0.16);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--sand); color:var(--steel); font-family:'IBM Plex Sans Arabic',sans-serif; line-height:1.7;}
+  .wrap{max-width:560px; margin:0 auto; padding:48px 20px 80px;}
+  h1.display{font-family:'Lalezar',sans-serif; font-weight:400; font-size:2rem; margin:0 0 8px;}
+  .sub{color:var(--steel-soft); margin:0 0 30px;}
+  .logo-header{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .logo-header img{height:52px; width:52px; object-fit:contain;}
+  a.back{display:inline-block; margin-bottom:20px; color:var(--steel-soft); text-decoration:none; font-size:0.9rem;}
+  .box{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:26px;}
+  input{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:4px; font-size:1rem; margin-bottom:14px;}
+  button{width:100%; padding:13px; background:var(--steel); color:var(--paper); border:none; border-radius:4px;
+    font-size:1rem; font-weight:700; cursor:pointer;}
+  button:hover{background:var(--rust);}
+  .switch-link{display:block; text-align:center; margin-top:4px; color:var(--steel-soft); font-size:0.85rem;
+    text-decoration:underline; cursor:pointer; background:none; border:none; width:auto;}
+  #result{margin-top:20px;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px; margin-top:10px;}
+  .card p{margin:4px 0;}
+  .status-approved{color:#2c5a36; font-weight:bold;}
+  .status-pending{color:#7e3a20; font-weight:bold;}
+  .status-none{color:#7e3a20;}
+  .action-btn{display:inline-block; margin-top:14px; padding:10px 16px; background:var(--rust); color:#fff;
+    border-radius:4px; text-decoration:none; font-size:0.9rem;}
+  .hint{font-size:0.82rem; color:var(--steel-soft); margin:-8px 0 14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">← رجوع للصفحة الرئيسية</a>
+  <div class="logo-header"><img src="/static/logo.png" alt="شعار"></div>
+  <h1 class="display">تأكد من بياناتك</h1>
+  <p class="sub" id="subText">اكتب رقم واتسابك المسجل وشوف حالة بياناتك في الدليل.</p>
+
+  <div class="box">
+    <div id="phoneField">
+      <input type="tel" id="phoneInput" placeholder="249912345678 (بدون علامة +)">
+      <p class="hint">لو ما متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
+    </div>
+    <div id="nameField" style="display:none;">
+      <input type="text" id="nameInput" placeholder="اسم المحل أو التاجر">
+    </div>
+    <button onclick="checkTrader()">تحقق الآن</button>
+    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">ما لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
+    <div id="result"></div>
+  </div>
+</div>
+
+<script>
+let mode = 'phone';
+
+function toggleMode(){
+  mode = (mode === 'phone') ? 'name' : 'phone';
+  document.getElementById('phoneField').style.display = (mode === 'phone') ? 'block' : 'none';
+  document.getElementById('nameField').style.display = (mode === 'name') ? 'block' : 'none';
+  document.getElementById('switchBtn').textContent = (mode === 'phone')
+    ? 'ما لاقي بياناتك بالرقم؟ ابحث بالاسم'
+    : 'ارجع للبحث بالرقم';
+  document.getElementById('subText').textContent = (mode === 'phone')
+    ? 'اكتب رقم واتسابك المسجل وشوف حالة بياناتك في الدليل.'
+    : 'اكتب اسم محلك أو اسمك وشوف كل التسجيلات المطابقة.';
+  document.getElementById('result').innerHTML = '';
+}
+
+function renderOneResult(data, phoneForLink){
+  const status = data.status;
+  const whatsappForLink = phoneForLink || data.whatsapp || '';
+  if(status === 'approved'){
+    return `
+      <div class="card">
+        <p class="status-approved">✅ بياناتك موجودة ومفعّلة في الدليل</p>
+        <p><b>الاسم:</b> ${data.name}</p>
+        <p><b>الرقم المسجل:</b> ${data.whatsapp}</p>
+        <p><b>التخصص:</b> ${data.category}</p>
+        <p><b>الموقع:</b> ${data.location}</p>
+        <p><b>التفاصيل:</b> ${data.details || '-'}</p>
+        <a class="action-btn" href="/register?correction=1&name=${encodeURIComponent(data.name)}&whatsapp=${encodeURIComponent(whatsappForLink)}&specialty=${encodeURIComponent(data.category)}&details=${encodeURIComponent(data.details||'')}&location=${encodeURIComponent(data.location)}">البيانات غلط؟ اطلب تصحيح</a>
+      </div>`;
+  } else if(status === 'pending'){
+    return `
+      <div class="card">
+        <p class="status-pending">⏳ طلب باسم "${data.name}" مسجل وقيد المراجعة</p>
+        <p><b>الرقم:</b> ${data.whatsapp}</p>
+        <p>هنبلغك على واتساب فور ما يتم الاعتماد.</p>
+      </div>`;
+  } else {
+    return `
+      <div class="card">
+        <p class="status-none">طلب باسم "${data.name}" (${data.whatsapp}) لم يتم قبوله سابقاً.</p>
+        <a class="action-btn" href="/register">سجّل من جديد</a>
+      </div>`;
+  }
+}
+
+async function checkTrader(){
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = '';
+
+  let url = '';
+  let phoneForLink = '';
+
+  if(mode === 'phone'){
+    const phone = document.getElementById('phoneInput').value.trim();
+    if(!phone){ resultDiv.innerHTML = '<p>اكتب رقمك الأول.</p>'; return; }
+    phoneForLink = phone;
+    url = '/api/check-trader?whatsapp=' + encodeURIComponent(phone);
+  } else {
+    const name = document.getElementById('nameInput').value.trim();
+    if(!name){ resultDiv.innerHTML = '<p>اكتب الاسم الأول.</p>'; return; }
+    url = '/api/check-trader?name=' + encodeURIComponent(name);
+  }
+
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(!data.found || !data.matches || data.matches.length === 0){
+      resultDiv.innerHTML = `
+        <div class="card">
+          <p class="status-none">ما لقينا بياناتك في الدليل.</p>
+          <a class="action-btn" href="/register">سجّل الآن</a>
+        </div>`;
+      return;
+    }
+
+    resultDiv.innerHTML = data.matches.map(m => renderOneResult(m, phoneForLink)).join('');
+  } catch(err){
+    resultDiv.innerHTML = '<p>حصلت مشكلة، حاول تاني.</p>';
+  }
+}
+</script>
+</body>
+</html>
