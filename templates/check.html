@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تأكد من بياناتك — دليل السجانة</title>
+<title>تأكد من بياناتك — واتساب السجانة</title>
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <link href="https://fonts.googleapis.com/css2?family=Lalezar&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -47,13 +47,13 @@
   <div class="box">
     <div id="phoneField">
       <input type="tel" id="phoneInput" placeholder="249912345678 (بدون علامة +)">
-      <p class="hint">لو ما متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
+      <p class="hint">لو مش متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
     </div>
     <div id="nameField" style="display:none;">
       <input type="text" id="nameInput" placeholder="اسم المحل أو التاجر">
     </div>
     <button onclick="checkTrader()">تحقق الآن</button>
-    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">ما لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
+    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">مش لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
     <div id="result"></div>
   </div>
 </div>
@@ -66,7 +66,7 @@ function toggleMode(){
   document.getElementById('phoneField').style.display = (mode === 'phone') ? 'block' : 'none';
   document.getElementById('nameField').style.display = (mode === 'name') ? 'block' : 'none';
   document.getElementById('switchBtn').textContent = (mode === 'phone')
-    ? 'ما لاقي بياناتك بالرقم؟ ابحث بالاسم'
+    ? 'مش لاقي بياناتك بالرقم؟ ابحث بالاسم'
     : 'ارجع للبحث بالرقم';
   document.getElementById('subText').textContent = (mode === 'phone')
     ? 'اكتب رقم واتسابك المسجل وشوف حالة بياناتك في الدليل.'
@@ -98,7 +98,7 @@ function renderOneResult(data, phoneForLink){
   } else {
     return `
       <div class="card">
-        <p class="status-none">طلب باسم "${data.name}" (${data.whatsapp}) لم يتم قبوله سابقاً.</p>
+        <p class="status-none">طلب باسم "${data.name}" (${data.whatsapp}) ما اتقبلش سابقاً.</p>
         <a class="action-btn" href="/register">سجّل من جديد</a>
       </div>`;
   }
@@ -129,7 +129,7 @@ async function checkTrader(){
     if(!data.found || !data.matches || data.matches.length === 0){
       resultDiv.innerHTML = `
         <div class="card">
-          <p class="status-none">ما لقينا بياناتك في الدليل.</p>
+          <p class="status-none">مش لقينا بياناتك في الدليل.</p>
           <a class="action-btn" href="/register">سجّل الآن</a>
         </div>`;
       return;
