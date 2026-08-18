@@ -16,6 +16,7 @@ ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
 PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "sajjana123")
 ADMIN_KEY = os.environ.get("SAJJANA_ADMIN_KEY", "sajjana_admin_2026")
+OWNER_WHATSAPP_NUMBER = os.environ.get("OWNER_WHATSAPP_NUMBER", "")
 
 GRAPH_API_URL = f"https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages"
 
@@ -29,41 +30,42 @@ STATS_FILE = os.path.join(BASE_DIR, "message_stats.json")
 ADS_FILE = os.path.join(BASE_DIR, "ads.json")
 ADS_STATS_FILE = os.path.join(BASE_DIR, "ads_stats.json")
 ADS_UPLOAD_DIR = os.path.join(BASE_DIR, "static", "ads")
+UNMATCHED_FILE = os.path.join(BASE_DIR, "unmatched_queries.json")
 SITE_BASE_URL = "https://mohbab.pythonanywhere.com"
 
 REGISTER_URL = "https://mohbab.pythonanywhere.com/register"
 
 TRADER_DAILY_LIMIT = 15
-SHOPPER_DAILY_LIMIT = 5
+SHOPPER_DAILY_LIMIT = 15
 MAX_TRADERS_PER_REPLY = 4
 PRIORITY_SLOTS = 2
 
 JOIN_ROW_ID = "cat_join_trader"
 
-WELCOME_TEXT = "🏗️ أهلاً بيك في دليل سوق السجانة! اختار التخصص الذي تبحث عنه من القائمة تحت:"
+WELCOME_TEXT = "🏗️ أهلاً بيكم في واتساب السجانة! اختار التخصص اللي بتدوّر عليهو من القايمة تحت:"
 NOT_FOUND_MESSAGE = (
-    "ما لقيتش تخصص مطابق 🤔\n"
-    "اكتب اسم التخصص، أو اكتب كلمة \"قائمة\" عشان تشوف كل الخيارات."
+    "ما لقيناهو دا للأسف 🤔\n"
+    "اكتب اسم التخصص، أو اكتب \"قائمة\" عشان تشوف كل الخيارات."
 )
-EMPTY_CATEGORY_MESSAGE = "لسه مافي تجار مسجلين في التخصص ده، جرب تاني قريب 🙏"
+EMPTY_CATEGORY_MESSAGE = "للأسف لسه ما عندنا تجار مسجلين في التخصص دا، جرّب تاني قريب 🙏"
 LIMIT_REACHED_MESSAGE = (
-    "وصلت للحد الأقصى من الرسائل المسموحة النهاردة 🙏\n"
-    "جرب تاني بكرة، أو لو الموضوع مستعجل تواصل معانا مباشرة."
+    "وصلت لأقصى عدد رسائل مسموح بيهو النهاردة 🙏\n"
+    "جرّب تاني بكرة، أو لو الموضوع مستعجل كلّمنا مباشرة."
 )
 JOIN_REPLY_TEXT = (
-    f"يسعدنا انضمامك لدليل السجانة! 🎉\n"
-    f"سجّل بياناتك من الرابط ده (يستغرق دقيقة بس):\n{REGISTER_URL}"
+    f"يسعدنا انضمامك لواتساب السجانة! 🎉\n"
+    f"سجّل بياناتك من الرابط دا (بياخد دقيقة بس):\n{REGISTER_URL}"
 )
 EXISTING_TRADER_REPLY_TEXT = (
-    "أهلاً بيك تاني! 👋 لاحظنا إن رقمك مسجل عندنا بالفعل.\n\n"
+    "أهلين بيك تاني! 👋 لاحظنا إن رقمك مسجل عندنا خلاص.\n\n"
     f"تأكد من بياناتك أو صحّحها من هنا:\n{SITE_BASE_URL}/check\n\n"
-    f"أو لو حابب تسجل محل جديد:\n{REGISTER_URL}"
+    f"أو لو عايز تسجل محل جديد:\n{REGISTER_URL}"
 )
-ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف اللي بتدور عليه، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
+ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف الما داير، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
 TRADER_THANK_YOU_TEXT = (
-    "شكراً لتسجيلك في دليل السجانة! 🎉\n"
-    "طلبك دلوقتي قيد المراجعة، وهنبلغك بالواتساب فور ما يتم اعتماده.\n\n"
-    "لو حابب تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
+    "شكراً ليك على تسجيلك في واتساب السجانة! 🎉\n"
+    "طلبك دلوقتي قيد المراجعة، وح نبلّغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "لو داير تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
 ROLE_TRADER_ID = "role_trader"
@@ -447,7 +449,7 @@ def send_role_question(to_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، مين حضرتك؟"},
+            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، منو حضرتك؟"},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": ROLE_TRADER_ID, "title": "🔧 أنا تاجر"}},
@@ -472,7 +474,7 @@ def send_list_message(to_number):
         "type": "interactive",
         "interactive": {
             "type": "list",
-            "header": {"type": "text", "text": "دليل السجانة"},
+            "header": {"type": "text", "text": "واتساب السجانة"},
             "body": {"text": WELCOME_TEXT},
             "footer": {"text": "اختار من القائمة تحت"},
             "action": {
@@ -500,6 +502,37 @@ def maybe_send_ad(to_number, category_id):
             send_ad(to_number, ad)
         except Exception as e:
             print("Ad send failed (non-fatal):", e)
+
+
+def notify_owner_new_trader(trader):
+    if not OWNER_WHATSAPP_NUMBER:
+        print("OWNER_WHATSAPP_NUMBER not set, skipping owner notification.")
+        return
+    cat_title = {c["id"]: c["title"] for c in get_categories()}
+    text = (
+        "🔔 تسجيل تاجر جديد في واتساب السجانة\n\n"
+        f"الاسم: {trader.get('name')}\n"
+        f"التخصص: {cat_title.get(trader.get('category_id'), '')}\n"
+        f"الرقم: {trader.get('whatsapp')}\n"
+        f"الموقع: {trader.get('location')}\n\n"
+        f"راجعه من هنا:\n{SITE_BASE_URL}/admin?key={ADMIN_KEY}"
+    )
+    try:
+        send_text_message(OWNER_WHATSAPP_NUMBER, text)
+    except Exception as e:
+        print("Owner notification failed (non-fatal):", e)
+
+
+def log_unmatched_query(phone_number, user_text):
+    entries = load_json(UNMATCHED_FILE, [])
+    entries.append({
+        "date": str(date.today()),
+        "phone": phone_number,
+        "text": user_text[:200],
+    })
+    # سيب بس آخر ١٠٠ طلب عشان الملف يفضل صغير
+    entries = entries[-100:]
+    save_json(UNMATCHED_FILE, entries)
 
 
 # =========================================================
@@ -557,6 +590,7 @@ def receive_message():
                 maybe_send_ad(from_number, value_)
             else:
                 send_text_message(from_number, NOT_FOUND_MESSAGE)
+                log_unmatched_query(from_number, user_text)
 
         elif msg_type == "interactive":
             interactive = message.get("interactive", {})
@@ -691,6 +725,8 @@ def submit_trader():
         except Exception as send_err:
             print("Thank-you message failed (non-fatal):", send_err)
 
+        notify_owner_new_trader(new_trader)
+
         return jsonify({"status": "ok"}), 200
     except Exception as e:
         print("Submit error:", e)
@@ -706,7 +742,7 @@ ADMIN_PAGE = """
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>إدارة دليل السجانة</title>
+<title>إدارة واتساب السجانة</title>
 <link rel="icon" type="image/png" href="/static/favicon-32.png">
 <style>
   body{{font-family:Arial,sans-serif; background:#EAE4D9; color:#24272B; padding:24px;}}
@@ -743,6 +779,12 @@ ADMIN_PAGE = """
   .search-box input{{flex:1; padding:10px; border:1px solid #ccc; border-radius:4px; font-size:0.95rem;}}
   .search-box button{{background:#24272B; color:#fff; padding:10px 16px;}}
   .bulk-bar{{margin:10px 0; padding:8px; background:#dfe3e2; border-radius:4px;}}
+  .tabs-nav{{display:flex; gap:4px; margin:20px 0 0; border-bottom:2px solid #24272B; flex-wrap:wrap;}}
+  .tab-btn{{padding:10px 18px; background:#dfe3e2; border:none; border-radius:6px 6px 0 0;
+    cursor:pointer; font-size:0.9rem; font-weight:bold; color:#454B50;}}
+  .tab-btn.active{{background:#24272B; color:#fff;}}
+  .tab-panel{{display:none; padding-top:20px;}}
+  .tab-panel.active{{display:block;}}
 </style>
 <script>
 function toggleAll(cls, check){{
@@ -759,17 +801,37 @@ function submitBulk(cls, hiddenId, action){{
   form.appendChild(actionInput);
   return true;
 }}
+function showTab(name){{
+  document.querySelectorAll('.tab-panel').forEach(function(p){{ p.classList.remove('active'); }});
+  document.querySelectorAll('.tab-btn').forEach(function(b){{ b.classList.remove('active'); }});
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('btn-' + name).classList.add('active');
+  window.location.hash = name;
+}}
+window.addEventListener('DOMContentLoaded', function(){{
+  var initial = window.location.hash ? window.location.hash.substring(1) : 'pending';
+  if(!document.getElementById('tab-' + initial)){{ initial = 'pending'; }}
+  showTab(initial);
+}});
 </script>
 </head>
 <body>
 <div class="logo-header" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
   <img src="/static/logo.png" alt="شعار" style="height:52px;width:52px;object-fit:contain;">
-  <h1 style="margin:0;">لوحة إدارة دليل السجانة</h1>
+  <h1 style="margin:0;">لوحة إدارة واتساب السجانة</h1>
 </div>
 
 <div class="stats-bar">
   <div class="stat-box">رسائل اليوم<b>{msgs_today}</b></div>
   <div class="stat-box">إجمالي الرسائل<b>{msgs_total}</b></div>
+</div>
+
+<div class="tabs-nav">
+  <button type="button" class="tab-btn" id="btn-pending" onclick="showTab('pending')">قيد المراجعة ({pending_count})</button>
+  <button type="button" class="tab-btn" id="btn-traders" onclick="showTab('traders')">التجار المعتمدين ({approved_count})</button>
+  <button type="button" class="tab-btn" id="btn-stats" onclick="showTab('stats')">الإحصائيات</button>
+  <button type="button" class="tab-btn" id="btn-categories" onclick="showTab('categories')">التخصصات</button>
+  <button type="button" class="tab-btn" id="btn-ads" onclick="showTab('ads')">الإعلانات</button>
 </div>
 
 <form class="search-box" method="GET" action="/admin">
@@ -778,25 +840,47 @@ function submitBulk(cls, hiddenId, action){{
   <button type="submit">بحث</button>
 </form>
 
-<h2>تسجيلات قيد المراجعة ({pending_count})</h2>
-{pending_table}
+<div class="tab-panel" id="tab-pending">
+  <h2>تسجيلات قيد المراجعة ({pending_count})</h2>
+  {pending_table}
+</div>
 
-<h2>كل التجار المعتمدين ({approved_count})</h2>
-{approved_table}
+<div class="tab-panel" id="tab-traders">
+  <h2>كل التجار المعتمدين ({approved_count})</h2>
+  {approved_table}
+</div>
 
-<h2>إحصائيات التجار حسب التخصص</h2>
-{category_stats_table}
+<div class="tab-panel" id="tab-stats">
+  <h2>إحصائيات التجار حسب التخصص</h2>
+  {category_stats_table}
 
-<h2>إضافة تخصص جديد</h2>
-<form class="add-form" method="POST" action="/admin/add-category">
-  <input type="hidden" name="key" value="{key}">
-  <input type="text" name="title" placeholder="اسم التخصص الجديد" required>
-  <button class="approve" type="submit">إضافة التخصص</button>
-</form>
+  <h2>طلبات ما لقيناش ليها رد (آخر ٣٠)</h2>
+  <p style="color:#454B50;font-size:0.85rem;">دي منتجات الزباين بتسأل عنها ومحتاجة تجار جدد أو تخصصات جديدة.</p>
+  {unmatched_table}
 
-<h2>التخصصات الحالية</h2>
-<p>{categories_list}</p>
+  <form method="GET" action="/admin/trigger-report" target="_blank" style="margin-top:16px;">
+    <input type="hidden" name="key" value="{key}">
+    <button class="approve" type="submit">ابعت تقرير أسبوعي دلوقتي</button>
+  </form>
+  <p style="color:#454B50;font-size:0.8rem;margin-top:6px;">
+    عشان يترسل تلقائياً كل أسبوع، اربط الرابط ده بخدمة مجانية زي cron-job.org:<br>
+    <code>{site_base}/admin/trigger-report?key={key}</code>
+  </p>
+</div>
 
+<div class="tab-panel" id="tab-categories">
+  <h2>إضافة تخصص جديد</h2>
+  <form class="add-form" method="POST" action="/admin/add-category">
+    <input type="hidden" name="key" value="{key}">
+    <input type="text" name="title" placeholder="اسم التخصص الجديد" required>
+    <button class="approve" type="submit">إضافة التخصص</button>
+  </form>
+
+  <h2>التخصصات الحالية</h2>
+  <p>{categories_list}</p>
+</div>
+
+<div class="tab-panel" id="tab-ads">
 <h2>الإعلانات</h2>
 {ads_table}
 
@@ -822,11 +906,11 @@ function submitBulk(cls, hiddenId, action){{
   </select>
 
   <div id="adTextField">
-    <input type="text" name="text" maxlength="70" placeholder="نص الإعلان (حتى 70 حرف)">
+    <input type="text" name="text" maxlength="300" placeholder="نص الإعلان (حتى 300 حرف)">
   </div>
   <div id="adImageField" style="display:none;">
     <input type="file" name="image" accept="image/*">
-    <input type="text" name="text" maxlength="70" placeholder="تعليق مختصر تحت الصورة (اختياري)">
+    <input type="text" name="text" maxlength="300" placeholder="تعليق مختصر تحت الصورة (اختياري)">
   </div>
 
   <label style="display:block;margin:10px 0 4px;font-size:0.85rem;font-weight:bold;">أقصى عدد ظهور يومياً</label>
@@ -837,6 +921,7 @@ function submitBulk(cls, hiddenId, action){{
 
   <button class="approve" type="submit">إضافة الإعلان</button>
 </form>
+</div>
 
 <script>
 function toggleAdFields(){{
@@ -1001,6 +1086,16 @@ def admin_page():
         f'<option value="{c["id"]}">{c["title"]}</option>' for c in categories
     )
 
+    unmatched = load_json(UNMATCHED_FILE, [])
+    if not unmatched:
+        unmatched_table = '<p class="empty">مفيش طلبات غير ملباة مسجلة لسه.</p>'
+    else:
+        rows = "".join(
+            f"<tr><td>{u['date']}</td><td>{u['text']}</td></tr>"
+            for u in reversed(unmatched[-30:])
+        )
+        unmatched_table = f"<table><tr><th>التاريخ</th><th>النص</th></tr>{rows}</table>"
+
     ads = get_ads()
     if not ads:
         ads_table = '<p class="empty">مفيش إعلانات مضافة لسه.</p>'
@@ -1049,6 +1144,8 @@ def admin_page():
         category_stats_table=category_stats_table,
         ads_table=ads_table,
         category_select_options=category_select_options,
+        unmatched_table=unmatched_table,
+        site_base=SITE_BASE_URL,
     )
 
 
@@ -1142,6 +1239,59 @@ def admin_add_category():
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
 
+@app.route("/admin/trigger-report", methods=["GET"])
+def admin_trigger_report():
+    key = request.args.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    if not OWNER_WHATSAPP_NUMBER:
+        return "لازم تحدد OWNER_WHATSAPP_NUMBER في إعدادات السيرفر الأول عشان التقرير يوصلك.", 400
+
+    stats = load_json(STATS_FILE, {"total": 0, "by_date": {}})
+    by_date = stats.get("by_date", {})
+    last_7_dates = sorted(by_date.keys())[-7:]
+    week_total = sum(by_date.get(d, 0) for d in last_7_dates)
+
+    traders = get_traders()
+    approved = [t for t in traders if t.get("status") == "approved"]
+    pending = [t for t in traders if t.get("status") == "pending"]
+    new_this_week = [
+        t for t in traders
+        if t.get("submitted_at", "") in last_7_dates and t.get("status") == "approved"
+    ]
+
+    categories = get_categories()
+    cat_title = {c["id"]: c["title"] for c in categories}
+    counts_by_cat = {}
+    for t in approved:
+        cid = t.get("category_id")
+        counts_by_cat[cid] = counts_by_cat.get(cid, 0) + 1
+    top_category = max(counts_by_cat, key=counts_by_cat.get) if counts_by_cat else None
+    top_category_label = cat_title.get(top_category, "-") if top_category else "-"
+
+    unmatched = load_json(UNMATCHED_FILE, [])
+    unmatched_this_week = [u for u in unmatched if u.get("date") in last_7_dates]
+
+    report = (
+        "📊 تقرير واتساب السجانة الأسبوعي\n\n"
+        f"📩 رسائل الأسبوع دا: {week_total}\n"
+        f"✅ تجار معتمدين (الإجمالي): {len(approved)}\n"
+        f"🆕 تجار اتوافق عليهم الأسبوع دا: {len(new_this_week)}\n"
+        f"⏳ تسجيلات لسه قيد المراجعة: {len(pending)}\n"
+        f"🏆 أكتر تخصص عدد تجار: {top_category_label}\n"
+        f"❓ طلبات ما لقيناش ليها رد الأسبوع دا: {len(unmatched_this_week)}\n\n"
+        f"راجع كل التفاصيل من هنا:\n{SITE_BASE_URL}/admin?key={ADMIN_KEY}"
+    )
+
+    try:
+        send_text_message(OWNER_WHATSAPP_NUMBER, report)
+    except Exception as e:
+        return f"فشل إرسال التقرير: {e}", 500
+
+    return "تم إرسال التقرير بنجاح ✅ تقدر تقفل الصفحة دي."
+
+
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 
@@ -1154,7 +1304,7 @@ def admin_add_ad():
     scope = request.form.get("scope", "category")
     category_id = request.form.get("category_id") if scope == "category" else None
     ad_type = request.form.get("ad_type", "text")
-    text = request.form.get("text", "").strip()[:70]
+    text = request.form.get("text", "").strip()[:300]
 
     try:
         daily_limit = max(1, int(request.form.get("daily_limit", 20)))
