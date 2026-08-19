@@ -410,7 +410,7 @@ def find_text_action(user_text):
     if text in ("قائمة", "list", "الخيارات"):
         return ("list", None)
 
-    join_words = ["انضمام", "انضم", "تسجيل", "أنا تاجر", "عايز انضم"]
+    join_words = ["انضمام", "انضم", "تسجيل", "أنا تاجر", "عايز انضم", "تصحيح"]
     if any(w in text for w in join_words):
         return ("join", None)
 
@@ -655,16 +655,72 @@ def normalize_phone(raw):
     return digits
 
 
+ABOUT_APP_INTRO = (
+    "🏗️ *واتساب السجانة*\n"
+    "خدمة مجانية بتربط تجار سوق السجانة بالخرطوم مباشرة بالزباين عبر واتساب — "
+    "الزول بيكتب اسم الصنف الداير يشتريه، وبنوصله بيك على طول من غير ما يلف السوق كله.\n\n"
+    "فايدتك من الانضمام: زباين جداد بيوصلوك من غير أي مجهود أو تكلفة منك.\n"
+)
+
+
+def build_check_message(trader, include_intro=True):
+    from urllib.parse import quote
+
+    cat_title = {c["id"]: c["title"] for c in get_categories()}
+    status = trader.get("status", "pending")
+    name = trader.get("name", "")
+    category = cat_title.get(trader.get("category_id"), "")
+    location = trader.get("location", "")
+    details = trader.get("details", "") or "-"
+    whatsapp = trader.get("whatsapp", "")
+
+    intro = ABOUT_APP_INTRO if include_intro else ""
+
+    if status == "approved":
+        correction_link = (
+            f"{REGISTER_URL}?correction=1"
+            f"&name={quote(name)}&whatsapp={quote(whatsapp)}"
+            f"&specialty={quote(category)}&details={quote(trader.get('details',''))}"
+            f"&location={quote(location)}"
+        )
+        return (
+            f"{intro}\n"
+            "بنراجع بيانات التجار المسجلين معانا — دي بياناتك الحالية عندنا:\n\n"
+            f"الاسم: {name}\n"
+            f"التخصص: {category}\n"
+            f"الموقع: {location}\n"
+            f"التفاصيل: {details}\n\n"
+            f"البيانات غلط أو ناقصة؟ صحّحها من هنا:\n{correction_link}"
+        )
+    elif status == "pending":
+        return (
+            f"{intro}\n"
+            f"طلب انضمامك باسم \"{name}\" لسه قيد المراجعة.\n"
+            "هنبلغك على واتساب فور ما يتم الاعتماد."
+        )
+    else:
+        return (
+            f"{intro}\n"
+            f"طلب باسم \"{name}\" ({whatsapp}) ما اتقبلش سابقاً.\n"
+            f"تقدر تسجل من جديد من هنا:\n{REGISTER_URL}"
+        )
+
+
+CHECK_GENERIC_RESPONSE = (
+    "لو الرقم أو الاسم دا مسجل عندنا، وصلته رسالة واتساب دلوقتي فيها كل التفاصيل. "
+    "تأكد من فتح واتساب على نفس الرقم اللي كتبته."
+)
+
+
 @app.route("/api/check-trader", methods=["GET"])
 def api_check_trader():
     phone_raw = request.args.get("whatsapp", "").strip()
     name_query = request.args.get("name", "").strip().lower()
 
     if not phone_raw and not name_query:
-        return jsonify({"found": False, "matches": []})
+        return jsonify({"message": CHECK_GENERIC_RESPONSE})
 
     traders = get_traders()
-    cat_title = {c["id"]: c["title"] for c in get_categories()}
     matches = []
 
     if phone_raw:
@@ -679,21 +735,17 @@ def api_check_trader():
             if name_query in t.get("name", "").lower():
                 matches.append(t)
 
-    if not matches:
-        return jsonify({"found": False, "matches": []})
+    # نرسل التفاصيل على واتساب بتاع كل تسجيل مطابق بس - أبداً ما بنعرضها هنا
+    # عشان محدش يقدر يشوف بيانات شخص تاني من غير ما يملك رقمه فعلاً
+    for t in matches:
+        try:
+            send_text_message(t.get("whatsapp", ""), build_check_message(t))
+        except Exception as e:
+            print("Check-trader message send failed (non-fatal):", e)
 
-    results = [
-        {
-            "status": t.get("status", "pending"),
-            "name": t.get("name", ""),
-            "whatsapp": t.get("whatsapp", ""),
-            "category": cat_title.get(t.get("category_id"), ""),
-            "details": t.get("details", ""),
-            "location": t.get("location", ""),
-        }
-        for t in matches
-    ]
-    return jsonify({"found": True, "matches": results})
+    # نفس الرد بالظبط في كل الحالات (موجود/مش موجود) عشان محدش يقدر
+    # يكتشف مين مسجل عندنا ومين لأ من خلال فرق في الرد
+    return jsonify({"message": CHECK_GENERIC_RESPONSE})
 
 
 @app.route("/submit-trader", methods=["POST"])
@@ -1040,6 +1092,11 @@ def admin_page():
                   <input type="hidden" name="visibility" value="frozen">
                   <button class="frozen" type="submit">تجميد</button>
                 </form>
+                <form class="inline" method="POST" action="/admin/send-confirmation">
+                  <input type="hidden" name="key" value="{key}">
+                  <input type="hidden" name="id" value="{t['id']}">
+                  <button class="approve" type="submit">ابعت تأكيد بيانات</button>
+                </form>
                 <form class="inline" method="POST" action="/admin/trader-action"
                       onsubmit="return confirm('متأكد من الحذف النهائي؟');">
                   <input type="hidden" name="key" value="{key}">
@@ -1056,6 +1113,7 @@ def admin_page():
           <form class="inline" method="POST" action="/admin/bulk-action" id="bulkApprovedForm">
             <input type="hidden" name="key" value="{key}">
             <input type="hidden" name="ids" id="bulkApprovedIds">
+            <button type="submit" class="approve" onclick="return submitBulk('approved-check','bulkApprovedIds','confirm')">ابعت تأكيد بيانات للمحدد</button>
             <button type="submit" class="priority" onclick="return submitBulk('approved-check','bulkApprovedIds','priority')">أولوية للمحدد</button>
             <button type="submit" class="normal" onclick="return submitBulk('approved-check','bulkApprovedIds','normal')">عادي للمحدد</button>
             <button type="submit" class="frozen" onclick="return submitBulk('approved-check','bulkApprovedIds','frozen')">تجميد المحدد</button>
@@ -1198,8 +1256,36 @@ def admin_bulk_action():
         for t in traders:
             if t["id"] in ids:
                 t["visibility"] = bulk_action
+    elif bulk_action == "confirm":
+        sent_count = 0
+        for t in traders:
+            if t["id"] in ids:
+                try:
+                    send_text_message(t.get("whatsapp", ""), build_check_message(t))
+                    sent_count += 1
+                except Exception as e:
+                    print("Bulk confirm send failed (non-fatal):", e)
+        print(f"Bulk confirmation sent to {sent_count} traders")
 
     save_traders(traders)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+@app.route("/admin/send-confirmation", methods=["POST"])
+def admin_send_confirmation():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    trader_id = request.form.get("id")
+    traders = get_traders()
+    trader = next((t for t in traders if t["id"] == trader_id), None)
+    if trader:
+        try:
+            send_text_message(trader.get("whatsapp", ""), build_check_message(trader))
+        except Exception as e:
+            print("Send confirmation failed (non-fatal):", e)
+
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
 
