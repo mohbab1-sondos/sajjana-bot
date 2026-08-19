@@ -24,17 +24,14 @@
   button{width:100%; padding:13px; background:var(--steel); color:var(--paper); border:none; border-radius:4px;
     font-size:1rem; font-weight:700; cursor:pointer;}
   button:hover{background:var(--rust);}
+  button:disabled{opacity:0.6; cursor:not-allowed;}
   .switch-link{display:block; text-align:center; margin-top:4px; color:var(--steel-soft); font-size:0.85rem;
     text-decoration:underline; cursor:pointer; background:none; border:none; width:auto;}
   #result{margin-top:20px;}
   .card{background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px; margin-top:10px;}
-  .card p{margin:4px 0;}
-  .status-approved{color:#2c5a36; font-weight:bold;}
-  .status-pending{color:#7e3a20; font-weight:bold;}
-  .status-none{color:#7e3a20;}
-  .action-btn{display:inline-block; margin-top:14px; padding:10px 16px; background:var(--rust); color:#fff;
-    border-radius:4px; text-decoration:none; font-size:0.9rem;}
   .hint{font-size:0.82rem; color:var(--steel-soft); margin:-8px 0 14px;}
+  .privacy-note{font-size:0.8rem; color:var(--steel-soft); margin-top:24px; padding:12px; background:var(--paper);
+    border-radius:4px; border:1px solid var(--line);}
 </style>
 </head>
 <body>
@@ -42,20 +39,24 @@
   <a class="back" href="/">← رجوع للصفحة الرئيسية</a>
   <div class="logo-header"><img src="/static/logo.png" alt="شعار"></div>
   <h1 class="display">تأكد من بياناتك</h1>
-  <p class="sub" id="subText">اكتب رقم واتسابك المسجل وشوف حالة بياناتك في الدليل.</p>
+  <p class="sub" id="subText">اكتب رقم واتسابك وهنبعتلك حالة بياناتك على نفس الرقم مباشرة.</p>
 
   <div class="box">
     <div id="phoneField">
       <input type="tel" id="phoneInput" placeholder="249912345678 (بدون علامة +)">
-      <p class="hint">لو مش متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
+      <p class="hint">لو ما متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
     </div>
     <div id="nameField" style="display:none;">
       <input type="text" id="nameInput" placeholder="اسم المحل أو التاجر">
     </div>
-    <button onclick="checkTrader()">تحقق الآن</button>
-    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">مش لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
+    <button id="submitBtn" onclick="checkTrader()">ابعتلي على واتساب</button>
+    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">ما لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
     <div id="result"></div>
   </div>
+
+  <p class="privacy-note">
+    🔒 لحماية خصوصية التجار، مبنعرضش أي بيانات هنا على الشاشة — أي نتيجة بتتبعت على واتساب بتاع صاحب الرقم نفسه بس.
+  </p>
 </div>
 
 <script>
@@ -68,53 +69,18 @@ function toggleMode(){
   document.getElementById('switchBtn').textContent = (mode === 'phone')
     ? 'مش لاقي بياناتك بالرقم؟ ابحث بالاسم'
     : 'ارجع للبحث بالرقم';
-  document.getElementById('subText').textContent = (mode === 'phone')
-    ? 'اكتب رقم واتسابك المسجل وشوف حالة بياناتك في الدليل.'
-    : 'اكتب اسم محلك أو اسمك وشوف كل التسجيلات المطابقة.';
   document.getElementById('result').innerHTML = '';
-}
-
-function renderOneResult(data, phoneForLink){
-  const status = data.status;
-  const whatsappForLink = phoneForLink || data.whatsapp || '';
-  if(status === 'approved'){
-    return `
-      <div class="card">
-        <p class="status-approved">✅ بياناتك موجودة ومفعّلة في الدليل</p>
-        <p><b>الاسم:</b> ${data.name}</p>
-        <p><b>الرقم المسجل:</b> ${data.whatsapp}</p>
-        <p><b>التخصص:</b> ${data.category}</p>
-        <p><b>الموقع:</b> ${data.location}</p>
-        <p><b>التفاصيل:</b> ${data.details || '-'}</p>
-        <a class="action-btn" href="/register?correction=1&name=${encodeURIComponent(data.name)}&whatsapp=${encodeURIComponent(whatsappForLink)}&specialty=${encodeURIComponent(data.category)}&details=${encodeURIComponent(data.details||'')}&location=${encodeURIComponent(data.location)}">البيانات غلط؟ اطلب تصحيح</a>
-      </div>`;
-  } else if(status === 'pending'){
-    return `
-      <div class="card">
-        <p class="status-pending">⏳ طلب باسم "${data.name}" مسجل وقيد المراجعة</p>
-        <p><b>الرقم:</b> ${data.whatsapp}</p>
-        <p>هنبلغك على واتساب فور ما يتم الاعتماد.</p>
-      </div>`;
-  } else {
-    return `
-      <div class="card">
-        <p class="status-none">طلب باسم "${data.name}" (${data.whatsapp}) ما اتقبلش سابقاً.</p>
-        <a class="action-btn" href="/register">سجّل من جديد</a>
-      </div>`;
-  }
 }
 
 async function checkTrader(){
   const resultDiv = document.getElementById('result');
+  const btn = document.getElementById('submitBtn');
   resultDiv.innerHTML = '';
 
   let url = '';
-  let phoneForLink = '';
-
   if(mode === 'phone'){
     const phone = document.getElementById('phoneInput').value.trim();
     if(!phone){ resultDiv.innerHTML = '<p>اكتب رقمك الأول.</p>'; return; }
-    phoneForLink = phone;
     url = '/api/check-trader?whatsapp=' + encodeURIComponent(phone);
   } else {
     const name = document.getElementById('nameInput').value.trim();
@@ -122,22 +88,18 @@ async function checkTrader(){
     url = '/api/check-trader?name=' + encodeURIComponent(name);
   }
 
+  btn.disabled = true;
+  btn.textContent = 'جاري الإرسال...';
+
   try{
     const res = await fetch(url);
     const data = await res.json();
-
-    if(!data.found || !data.matches || data.matches.length === 0){
-      resultDiv.innerHTML = `
-        <div class="card">
-          <p class="status-none">مش لقينا بياناتك في الدليل.</p>
-          <a class="action-btn" href="/register">سجّل الآن</a>
-        </div>`;
-      return;
-    }
-
-    resultDiv.innerHTML = data.matches.map(m => renderOneResult(m, phoneForLink)).join('');
+    resultDiv.innerHTML = `<div class="card"><p>${data.message}</p></div>`;
   } catch(err){
-    resultDiv.innerHTML = '<p>حصلت مشكلة، حاول تاني.</p>';
+    resultDiv.innerHTML = '<div class="card"><p>حصلت مشكلة، حاول تاني.</p></div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ابعتلي على واتساب';
   }
 }
 </script>
