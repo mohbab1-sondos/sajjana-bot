@@ -429,6 +429,7 @@ def find_text_action(user_text):
 # إرسال الرسائل عبر واتساب
 # =========================================================
 def send_text_message(to_number, message):
+    to_number = normalize_phone(to_number)
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
     payload = {
         "messaging_product": "whatsapp",
@@ -438,6 +439,31 @@ def send_text_message(to_number, message):
     }
     response = requests.post(GRAPH_API_URL, headers=headers, json=payload)
     print("Send text status:", response.status_code, response.text)
+    return response
+
+
+def send_template_message(to_number, template_name, language_code, body_params):
+    """يبعت رسالة عبر قالب معتمد من Meta - الطريقة الوحيدة المسموحة
+    لبدء محادثة مع رقم ما كلمناش خلال آخر ٢٤ ساعة."""
+    to_number = normalize_phone(to_number)
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to_number,
+        "type": "template",
+        "template": {
+            "name": template_name,
+            "language": {"code": language_code},
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": p} for p in body_params],
+                }
+            ],
+        },
+    }
+    response = requests.post(GRAPH_API_URL, headers=headers, json=payload)
+    print("Send template status:", response.status_code, response.text)
     return response
 
 
@@ -662,6 +688,44 @@ ABOUT_APP_INTRO = (
     "فايدتك من الانضمام: زباين جداد بيوصلوك من غير أي مجهود أو تكلفة منك.\n"
 )
 
+# اسم القالب المعتمد من Meta - لازم يتسجل بنفس الاسم بالظبط في WhatsApp Manager
+CONFIRM_DATA_TEMPLATE_NAME = "confirm_trader_data"
+CONFIRM_DATA_TEMPLATE_LANG = "ar"
+
+
+def send_confirmation_via_template(trader):
+    """يبعت رسالة تأكيد بيانات عبر قالب معتمد - بتشتغل حتى مع أرقام
+    ما كلمناش خلال آخر ٢٤ ساعة (عكس الرسائل النصية العادية)."""
+    from urllib.parse import quote
+
+    cat_title = {c["id"]: c["title"] for c in get_categories()}
+    status = trader.get("status", "pending")
+    name = trader.get("name", "") or "تاجرنا العزيز"
+    category = cat_title.get(trader.get("category_id"), "") or "-"
+    location = trader.get("location", "") or "-"
+    details = trader.get("details", "") or "-"
+    whatsapp = trader.get("whatsapp", "")
+
+    if status == "approved":
+        correction_link = (
+            f"{REGISTER_URL}?correction=1"
+            f"&name={quote(name)}&whatsapp={quote(whatsapp)}"
+            f"&specialty={quote(category)}&details={quote(trader.get('details',''))}"
+            f"&location={quote(location)}"
+        )
+        params = [name, category, location, details, correction_link]
+    elif status == "pending":
+        params = [name, "قيد المراجعة", "-", "طلبك لسه ما اتوافقش عليه", REGISTER_URL]
+    else:
+        params = [name, "-", "-", "الطلب ما اتقبلش سابقاً، سجل من جديد", REGISTER_URL]
+
+    return send_template_message(
+        trader.get("whatsapp", ""),
+        CONFIRM_DATA_TEMPLATE_NAME,
+        CONFIRM_DATA_TEMPLATE_LANG,
+        params,
+    )
+
 
 def build_check_message(trader, include_intro=True):
     from urllib.parse import quote
@@ -739,7 +803,7 @@ def api_check_trader():
     # عشان محدش يقدر يشوف بيانات شخص تاني من غير ما يملك رقمه فعلاً
     for t in matches:
         try:
-            send_text_message(t.get("whatsapp", ""), build_check_message(t))
+            send_confirmation_via_template(t)
         except Exception as e:
             print("Check-trader message send failed (non-fatal):", e)
 
@@ -879,8 +943,8 @@ window.addEventListener('DOMContentLoaded', function(){{
 </div>
 
 <div class="tabs-nav">
-  <button type="button" class="tab-btn" id="btn-pending" onclick="showTab('pending')">قيد المراجعة ({pending_count})</button>
-  <button type="button" class="tab-btn" id="btn-traders" onclick="showTab('traders')">التجار المعتمدين ({approved_count})</button>
+  <button type="button" class="tab-btn" id="btn-pending" onclick="showTab('pending')">قيد المراجعة ({total_pending_count})</button>
+  <button type="button" class="tab-btn" id="btn-traders" onclick="showTab('traders')">التجار المعتمدين ({total_approved_count})</button>
   <button type="button" class="tab-btn" id="btn-stats" onclick="showTab('stats')">الإحصائيات</button>
   <button type="button" class="tab-btn" id="btn-categories" onclick="showTab('categories')">التخصصات</button>
   <button type="button" class="tab-btn" id="btn-ads" onclick="showTab('ads')">الإعلانات</button>
@@ -890,15 +954,16 @@ window.addEventListener('DOMContentLoaded', function(){{
   <input type="hidden" name="key" value="{key}">
   <input type="text" name="q" placeholder="ابحث بالاسم، الرقم، التخصص، أو التفاصيل" value="{search_query}">
   <button type="submit">بحث</button>
+  {clear_search_link}
 </form>
 
 <div class="tab-panel" id="tab-pending">
-  <h2>تسجيلات قيد المراجعة ({pending_count})</h2>
+  <h2>تسجيلات قيد المراجعة (معروض {pending_count} من {total_pending_count})</h2>
   {pending_table}
 </div>
 
 <div class="tab-panel" id="tab-traders">
-  <h2>كل التجار المعتمدين ({approved_count})</h2>
+  <h2>كل التجار المعتمدين (معروض {approved_count} من {total_approved_count})</h2>
   {approved_table}
 </div>
 
@@ -1017,6 +1082,11 @@ def admin_page():
 
     pending = [t for t in traders if t.get("status") == "pending" and matches_search(t)]
     approved = [t for t in traders if t.get("status") == "approved" and matches_search(t)]
+
+    # العدادات فوق التبويبات لازم توضح العدد الكلي الحقيقي دايماً،
+    # مش عدد نتائج البحث - عشان محدش يفتكر إن البيانات اتمسحت لو البحث رجّع صفر نتيجة
+    total_pending_count = sum(1 for t in traders if t.get("status") == "pending")
+    total_approved_count = sum(1 for t in traders if t.get("status") == "approved")
 
     if not pending:
         pending_table = '<p class="empty">مفيش تسجيلات جديدة قيد المراجعة.</p>'
@@ -1194,11 +1264,14 @@ def admin_page():
         pending_table=pending_table,
         approved_count=len(approved),
         approved_table=approved_table,
+        total_pending_count=total_pending_count,
+        total_approved_count=total_approved_count,
         key=key,
         categories_list=categories_list,
         msgs_today=stats["today"],
         msgs_total=stats["total"],
         search_query=search_query,
+        clear_search_link=(f'<a class="btn-link" href="/admin?key={key}">إلغاء البحث وعرض الكل</a>' if search_query else ''),
         category_stats_table=category_stats_table,
         ads_table=ads_table,
         category_select_options=category_select_options,
@@ -1261,7 +1334,7 @@ def admin_bulk_action():
         for t in traders:
             if t["id"] in ids:
                 try:
-                    send_text_message(t.get("whatsapp", ""), build_check_message(t))
+                    send_confirmation_via_template(t)
                     sent_count += 1
                 except Exception as e:
                     print("Bulk confirm send failed (non-fatal):", e)
@@ -1282,7 +1355,7 @@ def admin_send_confirmation():
     trader = next((t for t in traders if t["id"] == trader_id), None)
     if trader:
         try:
-            send_text_message(trader.get("whatsapp", ""), build_check_message(trader))
+            send_confirmation_via_template(trader)
         except Exception as e:
             print("Send confirmation failed (non-fatal):", e)
 
