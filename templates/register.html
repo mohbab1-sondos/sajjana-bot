@@ -39,6 +39,7 @@
   .logo-header{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
   .logo-header img{height:56px; width:56px; object-fit:contain;}
 </style>
+<!--PREFILL_SCRIPT-->
 </head>
 <body>
 <div class="wrap">
@@ -92,15 +93,24 @@
 <script>
 (function prefillFromQuery(){
   const params = new URLSearchParams(window.location.search);
-  if(params.get('correction') === '1'){
-    if(params.get('name')) document.getElementById('name').value = params.get('name');
-    if(params.get('whatsapp')) document.getElementById('whatsapp').value = params.get('whatsapp');
-    if(params.get('specialty')) document.getElementById('specialty').value = params.get('specialty');
-    if(params.get('details')) document.getElementById('details').value = params.get('details');
-    if(params.get('location')) document.getElementById('location').value = params.get('location');
-    document.getElementById('notes').value = 'طلب تصحيح بيانات لرقم مسجل مسبقاً';
-    document.querySelector('h1.display').textContent = 'صحّح بياناتك';
-  }
+  if(params.get('correction') !== '1') return;
+
+  // الطريقة الجديدة: بيانات جاهزة من السيرفر (رابط قصير برقم تعريف بس)
+  const data = window.__prefillData || {
+    name: params.get('name') || '',
+    whatsapp: params.get('whatsapp') || '',
+    specialty: params.get('specialty') || '',
+    details: params.get('details') || '',
+    location: params.get('location') || '',
+  };
+
+  if(data.name) document.getElementById('name').value = data.name;
+  if(data.whatsapp) document.getElementById('whatsapp').value = data.whatsapp;
+  if(data.specialty) document.getElementById('specialty').value = data.specialty;
+  if(data.details) document.getElementById('details').value = data.details;
+  if(data.location) document.getElementById('location').value = data.location;
+  document.getElementById('notes').value = 'طلب تصحيح بيانات لرقم مسجل مسبقاً';
+  document.querySelector('h1.display').textContent = 'صحّح بياناتك';
 })();
 
 document.getElementById('traderForm').addEventListener('submit', async function(e){
