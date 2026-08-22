@@ -410,6 +410,10 @@ def find_text_action(user_text):
     if text in ("قائمة", "list", "الخيارات"):
         return ("list", None)
 
+    confirm_words = ["تأكيد", "تاكيد", "راجع بياناتي", "بياناتي"]
+    if any(w in text for w in confirm_words):
+        return ("confirm", None)
+
     join_words = ["انضمام", "انضم", "تسجيل", "أنا تاجر", "عايز انضم", "تصحيح"]
     if any(w in text for w in join_words):
         return ("join", None)
@@ -610,6 +614,12 @@ def receive_message():
                 send_list_message(from_number)
             elif kind == "join":
                 send_text_message(from_number, trader_join_reply(from_number))
+            elif kind == "confirm":
+                trader = next((t for t in get_traders() if t.get("whatsapp") == from_number), None)
+                if trader:
+                    send_text_message(from_number, build_check_message(trader))
+                else:
+                    send_text_message(from_number, JOIN_REPLY_TEXT)
             elif kind == "category":
                 reply = build_category_reply(value_, from_number)
                 send_text_message(from_number, reply)
