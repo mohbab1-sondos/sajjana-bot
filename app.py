@@ -301,6 +301,7 @@ def get_category_traders(cat_id):
         t for t in get_traders()
         if t.get("category_id") == cat_id
         and t.get("status") == "approved"
+        and not t.get("is_correction")
         and t.get("visibility") != "frozen"
     ]
 
@@ -840,6 +841,14 @@ def submit_trader():
             return jsonify({"status": "error", "message": "بيانات ناقصة"}), 400
 
         traders = get_traders()
+        correction_for_id = payload.get("correction_for_id", "").strip()
+        original = None
+        if correction_for_id:
+            original = next(
+                (t for t in traders if t["id"] == correction_for_id and t.get("status") == "approved"),
+                None,
+            )
+
         new_trader = {
             "id": "t" + uuid.uuid4().hex[:8],
             "name": payload["name"],
@@ -852,15 +861,30 @@ def submit_trader():
             "visibility": "normal",
             "submitted_at": str(date.today()),
         }
+
+        if original:
+            # ده طلب تصحيح لتاجر معتمد بالفعل - نربطه بيه بدل ما نعتبره تسجيل جديد
+            new_trader["is_correction"] = True
+            new_trader["correction_for_id"] = original["id"]
+            original["status"] = "correction_pending"
+            original["pending_correction_id"] = new_trader["id"]
+
         traders.append(new_trader)
         save_traders(traders)
 
         try:
-            send_text_message(new_trader["whatsapp"], TRADER_THANK_YOU_TEXT)
+            if original:
+                send_text_message(
+                    new_trader["whatsapp"],
+                    "تم استلام طلب تصحيح بياناتك 👍 هنراجعه ونحدّثه قريباً.",
+                )
+            else:
+                send_text_message(new_trader["whatsapp"], TRADER_THANK_YOU_TEXT)
         except Exception as send_err:
             print("Thank-you message failed (non-fatal):", send_err)
 
-        notify_owner_new_trader(new_trader)
+        if not original:
+            notify_owner_new_trader(new_trader)
 
         return jsonify({"status": "ok"}), 200
     except Exception as e:
@@ -967,6 +991,7 @@ window.addEventListener('DOMContentLoaded', function(){{
   <button type="button" class="tab-btn" id="btn-stats" onclick="showTab('stats')">الإحصائيات</button>
   <button type="button" class="tab-btn" id="btn-categories" onclick="showTab('categories')">التخصصات</button>
   <button type="button" class="tab-btn" id="btn-ads" onclick="showTab('ads')">الإعلانات</button>
+  <button type="button" class="tab-btn" id="btn-corrections" onclick="showTab('corrections')">طلبات التصحيح ({corrections_count})</button>
 </div>
 
 <form class="search-box" method="GET" action="/admin">
@@ -1059,6 +1084,12 @@ window.addEventListener('DOMContentLoaded', function(){{
 </form>
 </div>
 
+<div class="tab-panel" id="tab-corrections">
+  <h2>طلبات التصحيح ({corrections_count})</h2>
+  <p style="color:#454B50;font-size:0.85rem;">لما توافق، بياناتك القديمة بتتحدث بالجديدة تلقائياً. التاجر مش بيظهر في "التجار المعتمدين" لحد ما تراجع الطلب.</p>
+  {corrections_table}
+</div>
+
 <script>
 function toggleAdFields(){{
   var type = document.getElementById('adTypeSelect').value;
@@ -1099,13 +1130,19 @@ def admin_page():
         ]).lower()
         return search_query in haystack
 
-    pending = [t for t in traders if t.get("status") == "pending" and matches_search(t)]
-    approved = [t for t in traders if t.get("status") == "approved" and matches_search(t)]
+    pending = [
+        t for t in traders
+        if t.get("status") == "pending" and not t.get("is_correction") and matches_search(t)
+    ]
+    approved = [
+        t for t in traders
+        if t.get("status") == "approved" and not t.get("is_correction") and matches_search(t)
+    ]
 
     # العدادات فوق التبويبات لازم توضح العدد الكلي الحقيقي دايماً،
     # مش عدد نتائج البحث - عشان محدش يفتكر إن البيانات اتمسحت لو البحث رجّع صفر نتيجة
-    total_pending_count = sum(1 for t in traders if t.get("status") == "pending")
-    total_approved_count = sum(1 for t in traders if t.get("status") == "approved")
+    total_pending_count = sum(1 for t in traders if t.get("status") == "pending" and not t.get("is_correction"))
+    total_approved_count = sum(1 for t in traders if t.get("status") == "approved" and not t.get("is_correction"))
 
     if not pending:
         pending_table = '<p class="empty">مفيش تسجيلات جديدة قيد المراجعة.</p>'
@@ -1278,6 +1315,43 @@ def admin_page():
           <th>النطاق</th><th>المحتوى</th><th>الظهور اليوم</th><th>المدة</th><th>الحالة</th><th>إجراء</th>
         </tr>{rows}</table>"""
 
+    corrections = [t for t in traders if t.get("is_correction") and t.get("status") == "pending"]
+    if not corrections:
+        corrections_table = '<p class="empty">مفيش طلبات تصحيح حالياً.</p>'
+    else:
+        rows = ""
+        for c in corrections:
+            original = next((t for t in traders if t["id"] == c.get("correction_for_id")), None)
+            old_name = original.get("name", "-") if original else "(الأصل محذوف)"
+            old_location = original.get("location", "-") if original else "-"
+            old_details = original.get("details", "-") if original else "-"
+            rows += f"""
+            <tr>
+              <td>
+                <b>القديم:</b> {old_name} / {old_location} / {old_details}<br>
+                <b>الجديد:</b> {c.get('name','')} / {c.get('location','')} / {c.get('details','')}
+              </td>
+              <td>{c.get('whatsapp','')}</td>
+              <td>{cat_title.get(c.get('category_id'),'')}</td>
+              <td>
+                <form class="inline" method="POST" action="/admin/correction-action">
+                  <input type="hidden" name="key" value="{key}">
+                  <input type="hidden" name="id" value="{c['id']}">
+                  <input type="hidden" name="action" value="approve">
+                  <button class="approve" type="submit">اعتماد التعديل</button>
+                </form>
+                <form class="inline" method="POST" action="/admin/correction-action">
+                  <input type="hidden" name="key" value="{key}">
+                  <input type="hidden" name="id" value="{c['id']}">
+                  <input type="hidden" name="action" value="reject">
+                  <button class="reject" type="submit">رفض والإبقاء على القديم</button>
+                </form>
+              </td>
+            </tr>"""
+        corrections_table = f"""<table><tr>
+          <th>البيانات (القديم مقابل الجديد)</th><th>واتساب</th><th>التخصص</th><th>إجراء</th>
+        </tr>{rows}</table>"""
+
     return ADMIN_PAGE.format(
         pending_count=len(pending),
         pending_table=pending_table,
@@ -1296,6 +1370,8 @@ def admin_page():
         category_select_options=category_select_options,
         unmatched_table=unmatched_table,
         site_base=SITE_BASE_URL,
+        corrections_count=len(corrections),
+        corrections_table=corrections_table,
     )
 
 
@@ -1554,6 +1630,42 @@ def admin_delete_ad():
                 pass
     ads = [a for a in ads if a["id"] != ad_id]
     save_ads(ads)
+    return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+
+@app.route("/admin/correction-action", methods=["POST"])
+def admin_correction_action():
+    key = request.form.get("key", "")
+    if key != ADMIN_KEY:
+        return "غير مصرح", 403
+
+    correction_id = request.form.get("id")
+    action = request.form.get("action")
+
+    traders = get_traders()
+    correction = next((t for t in traders if t["id"] == correction_id), None)
+    if not correction:
+        return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
+
+    original = next((t for t in traders if t["id"] == correction.get("correction_for_id")), None)
+
+    if action == "approve" and original:
+        original["name"] = correction.get("name", original.get("name"))
+        original["whatsapp"] = correction.get("whatsapp", original.get("whatsapp"))
+        original["category_id"] = correction.get("category_id", original.get("category_id"))
+        original["location"] = correction.get("location", original.get("location"))
+        original["details"] = correction.get("details", original.get("details"))
+        original["notes"] = correction.get("notes", original.get("notes"))
+        original["status"] = "approved"
+        original.pop("pending_correction_id", None)
+        correction["status"] = "approved"
+    elif action == "reject":
+        if original:
+            original["status"] = "approved"
+            original.pop("pending_correction_id", None)
+        correction["status"] = "rejected"
+
+    save_traders(traders)
     return f'<meta http-equiv="refresh" content="0;url=/admin?key={key}">'
 
 
