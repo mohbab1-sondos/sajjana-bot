@@ -675,6 +675,27 @@ def register_page():
         f'<option value="{c["title"]}">{c["title"]}</option>' for c in get_categories()
     )
     html = html.replace("<!--CATEGORY_OPTIONS-->", options)
+
+    prefill_script = ""
+    trader_id = request.args.get("id", "")
+    if trader_id:
+        trader = next((t for t in get_traders() if t.get("id") == trader_id), None)
+        if trader:
+            cat_title = {c["id"]: c["title"] for c in get_categories()}
+            data = {
+                "name": trader.get("name", ""),
+                "whatsapp": trader.get("whatsapp", ""),
+                "specialty": cat_title.get(trader.get("category_id"), ""),
+                "details": trader.get("details", ""),
+                "location": trader.get("location", ""),
+            }
+            prefill_script = (
+                "<script>window.__prefillData = "
+                + json.dumps(data, ensure_ascii=False)
+                + ";</script>"
+            )
+    html = html.replace("<!--PREFILL_SCRIPT-->", prefill_script)
+
     return html
 
 
@@ -693,9 +714,9 @@ def normalize_phone(raw):
 
 ABOUT_APP_INTRO = (
     "🏗️ *واتساب السجانة*\n"
-    "خدمة مجانية بتربط تجار سوق السجانة بالخرطوم مباشرة بالزباين عبر واتساب — "
-    "الزول بيكتب اسم الصنف الداير يشتريه، وبنوصله بيك على طول من غير ما يلف السوق كله.\n\n"
-    "فايدتك من الانضمام: زباين جداد بيوصلوك من غير أي مجهود أو تكلفة منك.\n"
+    "خدمة مجانية بتربط تجار سوق السجانة بالخرطوم مباشرة بالمشترين من المقاولين والزبائن عبر الواتساب — "
+    "الزول بيكتب اسم الصنف الداير يشتريه، وبنوصله بيك مباشرة من غير ما يلف السوق كله.\n\n"
+    "فايدتك من الانضمام: زباين جدد بيوصلوك من غير أي مجهود منك.\n"
 )
 
 # اسم القالب المعتمد من Meta - لازم يتسجل بنفس الاسم بالظبط في WhatsApp Manager
@@ -703,27 +724,23 @@ CONFIRM_DATA_TEMPLATE_NAME = "confirm_trader_data"
 CONFIRM_DATA_TEMPLATE_LANG = "ar"
 
 
+def build_correction_link(trader):
+    """رابط قصير برقم تعريف التاجر بس - الصفحة نفسها بتجيب باقي بياناته من عندنا."""
+    return f"{REGISTER_URL}?correction=1&id={trader.get('id', '')}"
+
+
 def send_confirmation_via_template(trader):
     """يبعت رسالة تأكيد بيانات عبر قالب معتمد - بتشتغل حتى مع أرقام
     ما كلمناش خلال آخر ٢٤ ساعة (عكس الرسائل النصية العادية)."""
-    from urllib.parse import quote
-
     cat_title = {c["id"]: c["title"] for c in get_categories()}
     status = trader.get("status", "pending")
     name = trader.get("name", "") or "تاجرنا العزيز"
     category = cat_title.get(trader.get("category_id"), "") or "-"
     location = trader.get("location", "") or "-"
     details = trader.get("details", "") or "-"
-    whatsapp = trader.get("whatsapp", "")
 
     if status == "approved":
-        correction_link = (
-            f"{REGISTER_URL}?correction=1"
-            f"&name={quote(name)}&whatsapp={quote(whatsapp)}"
-            f"&specialty={quote(category)}&details={quote(trader.get('details',''))}"
-            f"&location={quote(location)}"
-        )
-        params = [name, category, location, details, correction_link]
+        params = [name, category, location, details, build_correction_link(trader)]
     elif status == "pending":
         params = [name, "قيد المراجعة", "-", "طلبك لسه ما اتوافقش عليه", REGISTER_URL]
     else:
@@ -738,8 +755,6 @@ def send_confirmation_via_template(trader):
 
 
 def build_check_message(trader, include_intro=True):
-    from urllib.parse import quote
-
     cat_title = {c["id"]: c["title"] for c in get_categories()}
     status = trader.get("status", "pending")
     name = trader.get("name", "")
@@ -751,12 +766,6 @@ def build_check_message(trader, include_intro=True):
     intro = ABOUT_APP_INTRO if include_intro else ""
 
     if status == "approved":
-        correction_link = (
-            f"{REGISTER_URL}?correction=1"
-            f"&name={quote(name)}&whatsapp={quote(whatsapp)}"
-            f"&specialty={quote(category)}&details={quote(trader.get('details',''))}"
-            f"&location={quote(location)}"
-        )
         return (
             f"{intro}\n"
             "بنراجع بيانات التجار المسجلين معانا — دي بياناتك الحالية عندنا:\n\n"
@@ -764,7 +773,7 @@ def build_check_message(trader, include_intro=True):
             f"التخصص: {category}\n"
             f"الموقع: {location}\n"
             f"التفاصيل: {details}\n\n"
-            f"البيانات غلط أو ناقصة؟ صحّحها من هنا:\n{correction_link}"
+            f"البيانات غلط أو ناقصة؟ صحّحها من هنا:\n{build_correction_link(trader)}"
         )
     elif status == "pending":
         return (
