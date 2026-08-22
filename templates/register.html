@@ -49,6 +49,8 @@
   <p class="sub">املا بياناتك وهنتواصل معاك عبر واتساب لتفعيل حسابك خلال يوم أو اتنين.</p>
 
   <form id="traderForm">
+    <input type="hidden" id="correctionForId" name="correction_for_id" value="">
+
     <div class="field">
       <label for="name">اسم التاجر / المحل</label>
       <input type="text" id="name" name="name" required>
@@ -109,6 +111,7 @@
   if(data.specialty) document.getElementById('specialty').value = data.specialty;
   if(data.details) document.getElementById('details').value = data.details;
   if(data.location) document.getElementById('location').value = data.location;
+  document.getElementById('correctionForId').value = params.get('id') || '';
   document.getElementById('notes').value = 'طلب تصحيح بيانات لرقم مسجل مسبقاً';
   document.querySelector('h1.display').textContent = 'صحّح بياناتك';
 })();
@@ -128,6 +131,7 @@ document.getElementById('traderForm').addEventListener('submit', async function(
     details: document.getElementById('details').value,
     location: document.getElementById('location').value,
     notes: document.getElementById('notes').value,
+    correction_for_id: document.getElementById('correctionForId').value,
   };
 
   try{
