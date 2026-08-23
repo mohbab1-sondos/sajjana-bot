@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import re
 import uuid
 from datetime import date
 
@@ -678,7 +679,11 @@ def register_page():
     html = html.replace("<!--CATEGORY_OPTIONS-->", options)
 
     prefill_script = ""
-    trader_id = request.args.get("id", "")
+    raw_trader_id = request.args.get("id", "")
+    # حماية من فوضى ممكن تتلزق في الرابط (زي فواصل زيادة من قالب واتساب) -
+    # ناخد بس أول جزء متصل من حروف/أرقام ونرمي أي حاجة غريبة بعده
+    trader_id_match = re.match(r"^[A-Za-z0-9_-]+", raw_trader_id.strip())
+    trader_id = trader_id_match.group(0) if trader_id_match else ""
     if trader_id:
         trader = next((t for t in get_traders() if t.get("id") == trader_id), None)
         if trader:
