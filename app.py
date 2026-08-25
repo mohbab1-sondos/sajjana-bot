@@ -981,7 +981,7 @@ window.addEventListener('DOMContentLoaded', function(){{
 </head>
 <body>
 <div class="logo-header" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-  <img src="/static/logo.png" alt="شعار" style="height:52px;width:52px;object-fit:contain;">
+  <img src="/static/logo.png" alt="شعار" style="height:90px;width:90px;object-fit:contain;">
   <h1 style="margin:0;">لوحة إدارة واتساب السجانة</h1>
 </div>
 
@@ -1292,7 +1292,7 @@ def admin_page():
         rows = ""
         for ad in ads:
             scope_label = "عام (كل التخصصات)" if ad.get("scope") == "global" else cat_title.get(ad.get("category_id"), "-")
-            preview = ad.get("text", "") if ad.get("type") == "text" else f'<img src="{ad.get("image_path","")}" style="max-height:50px;">'
+            preview = ad.get("text", "") if ad.get("type") == "text" else f'<img src="{ad.get("image_path","")}" style="max-height:70px;">'
             status_label = "مفعّل ✅" if ad.get("enabled") else "متوقف ⏸"
             shown_today = get_ad_shown_count_today(ad["id"])
             rows += f"""
