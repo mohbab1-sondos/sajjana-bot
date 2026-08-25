@@ -43,14 +43,14 @@ PRIORITY_SLOTS = 2
 
 JOIN_ROW_ID = "cat_join_trader"
 
-WELCOME_TEXT = "🏗️ أهلاً بيكم في واتساب السجانة! اختار التخصص اللي بتدوّر عليهو من القايمة تحت:"
+WELCOME_TEXT = "🏗️ أهلاً بيكم في واتساب السجانة! اختار التخصص اللي بتفتش عليهو من القائمة تحت:"
 NOT_FOUND_MESSAGE = (
     "ما لقيناهو دا للأسف 🤔\n"
-    "اكتب اسم التخصص، أو اكتب \"قائمة\" عشان تشوف كل الخيارات."
+    "اكتب اسم التخصص، أو اكتب كلمة \"قائمة\" عشان تشوف كل الخيارات."
 )
 EMPTY_CATEGORY_MESSAGE = "للأسف لسه ما عندنا تجار مسجلين في التخصص دا، جرّب تاني قريب 🙏"
 LIMIT_REACHED_MESSAGE = (
-    "وصلت لأقصى عدد رسائل مسموح بيهو النهاردة 🙏\n"
+    "وصلت لأقصى عدد رسائل مسموح به اليوم  🙏\n"
     "جرّب تاني بكرة، أو لو الموضوع مستعجل كلّمنا مباشرة."
 )
 JOIN_REPLY_TEXT = (
@@ -58,14 +58,14 @@ JOIN_REPLY_TEXT = (
     f"سجّل بياناتك من الرابط دا (بياخد دقيقة بس):\n{REGISTER_URL}"
 )
 EXISTING_TRADER_REPLY_TEXT = (
-    "أهلين بيك تاني! 👋 لاحظنا إن رقمك مسجل عندنا خلاص.\n\n"
+    "أهلا بيك تاني! 👋 لاحظنا إن رقمك مسجل عندنا خلاص.\n\n"
     f"تأكد من بياناتك أو صحّحها من هنا:\n{SITE_BASE_URL}/check\n\n"
     f"أو لو عايز تسجل محل جديد:\n{REGISTER_URL}"
 )
-ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف الما داير، أو ابعت \"قائمة\" عشان تشوف كل التخصصات."
+ASK_PRODUCT_TEXT = "تمام 👍 اكتب اسم الصنف ال بتفتش عليه، أو كلمة \"قائمة\" عشان تشوف كل التخصصات."
 TRADER_THANK_YOU_TEXT = (
     "شكراً ليك على تسجيلك في واتساب السجانة! 🎉\n"
-    "طلبك دلوقتي قيد المراجعة، وح نبلّغك بالواتساب فور ما يتم اعتماده.\n\n"
+    "طلبك الان قيد المراجعة، وح نبلّغك بالواتساب فور ما يتم اعتماده.\n\n"
     "لو داير تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
@@ -481,11 +481,11 @@ def send_role_question(to_number):
         "type": "interactive",
         "interactive": {
             "type": "button",
-            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، منو حضرتك؟"},
+            "body": {"text": "🏗️ أهلاً بيك في واتساب السجانة! قبل ما نبدأ، عرفنا بنفسك "},
             "action": {
                 "buttons": [
                     {"type": "reply", "reply": {"id": ROLE_TRADER_ID, "title": "🔧 أنا تاجر"}},
-                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "🛒 أنا عميل"}},
+                    {"type": "reply", "reply": {"id": ROLE_CUSTOMER_ID, "title": "🛒أنا زبون "}},
                 ]
             },
         },
@@ -721,7 +721,7 @@ def normalize_phone(raw):
 ABOUT_APP_INTRO = (
     "🏗️ *واتساب السجانة*\n"
     "خدمة مجانية بتربط تجار سوق السجانة بالخرطوم مباشرة بالمشترين من المقاولين والزبائن عبر الواتساب — "
-    "الزول بيكتب اسم الصنف الداير يشتريه، وبنوصله بيك مباشرة من غير ما يلف السوق كله.\n\n"
+    "الزبون بيكتب اسم الصنف الداير يشتريه، وبنوصله بيك مباشرة من غير ما يلف السوق كله.\n\n"
     "فايدتك من الانضمام: زباين جدد بيوصلوك من غير أي مجهود منك.\n"
 )
 
@@ -737,7 +737,7 @@ def build_correction_link(trader):
 
 def send_confirmation_via_template(trader):
     """يبعت رسالة تأكيد بيانات عبر قالب معتمد - بتشتغل حتى مع أرقام
-    ما كلمناش خلال آخر ٢٤ ساعة (عكس الرسائل النصية العادية)."""
+    ما كلمناك خلال آخر ٢٤ ساعة (عكس الرسائل النصية العادية)."""
     cat_title = {c["id"]: c["title"] for c in get_categories()}
     status = trader.get("status", "pending")
     name = trader.get("name", "") or "تاجرنا العزيز"
@@ -748,9 +748,9 @@ def send_confirmation_via_template(trader):
     if status == "approved":
         params = [name, category, location, details, build_correction_link(trader)]
     elif status == "pending":
-        params = [name, "قيد المراجعة", "-", "طلبك لسه ما اتوافقش عليه", REGISTER_URL]
+        params = [name, "قيد المراجعة", "-", "طلبك لسه ما تمت الموافقة عليه", REGISTER_URL]
     else:
-        params = [name, "-", "-", "الطلب ما اتقبلش سابقاً، سجل من جديد", REGISTER_URL]
+        params = [name, "-", "-", "الطلب ما اتقبل سابقاً، سجل من جديد", REGISTER_URL]
 
     return send_template_message(
         trader.get("whatsapp", ""),
@@ -790,13 +790,13 @@ def build_check_message(trader, include_intro=True):
     else:
         return (
             f"{intro}\n"
-            f"طلب باسم \"{name}\" ({whatsapp}) ما اتقبلش سابقاً.\n"
+            f"طلب باسم \"{name}\" ({whatsapp}) ما اتقبل سابقاً.\n"
             f"تقدر تسجل من جديد من هنا:\n{REGISTER_URL}"
         )
 
 
 CHECK_GENERIC_RESPONSE = (
-    "لو الرقم أو الاسم دا مسجل عندنا، وصلته رسالة واتساب دلوقتي فيها كل التفاصيل. "
+    "لو الرقم أو الاسم دا مسجل عندنا، وصلته رسالة واتساب الآن فيها كل التفاصيل. "
     "تأكد من فتح واتساب على نفس الرقم اللي كتبته."
 )
 
@@ -825,14 +825,14 @@ def api_check_trader():
                 matches.append(t)
 
     # نرسل التفاصيل على واتساب بتاع كل تسجيل مطابق بس - أبداً ما بنعرضها هنا
-    # عشان محدش يقدر يشوف بيانات شخص تاني من غير ما يملك رقمه فعلاً
+    # عشان ما في زول يقدر يشوف بيانات شخص تاني من غير ما يملك رقمه فعلاً
     for t in matches:
         try:
             send_confirmation_via_template(t)
         except Exception as e:
             print("Check-trader message send failed (non-fatal):", e)
 
-    # نفس الرد بالظبط في كل الحالات (موجود/مش موجود) عشان محدش يقدر
+    # نفس الرد بالظبط في كل الحالات (موجود/غير موجود) عشان مافي زول يقدر
     # يكتشف مين مسجل عندنا ومين لأ من خلال فرق في الرد
     return jsonify({"message": CHECK_GENERIC_RESPONSE})
 
