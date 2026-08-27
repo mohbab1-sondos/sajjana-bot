@@ -69,6 +69,16 @@ TRADER_THANK_YOU_TEXT = (
     "لو داير تساعدنا، شارك رابط التسجيل مع تجار تعرفهم في السوق:\n"
     f"{REGISTER_URL}"
 )
+NOT_REGISTERED_TRADER_MESSAGE = (
+    "عذراً، هذا الرقم غير مسجل لدينا كتاجر في دليل السجانة 🙏\n"
+    "إذا كنت تاجراً وترغب في الانضمام، يمكنك تسجيل محلك من الرابط التالي:\n"
+    f"{REGISTER_URL}\n\n"
+    "أو تأكد من كتابة الرقم بشكل صحيح إذا كنت مسجلاً مسبقاً."
+)
+CUSTOMER_CONFIRM_GUIDE_TEXT = (
+    "هذا الخيار مخصص للتجار لمراجعة بيانات محالهم المسجلة 🏗️\n\n"
+    "إذا كنت تبحث عن تاجر مواد بناء، اكتب **اسم الصنف** الذي تحتاجه (مثل: سيراميك، اسمنت، حديد) وسنرسل لك بيانات التاجر فوراً."
+)
 ROLE_TRADER_ID = "role_trader"
 ROLE_CUSTOMER_ID = "role_customer"
 
@@ -137,7 +147,6 @@ def save_traders(traders):
     save_json(TRADERS_FILE, traders)
 
 
-# نتأكد إن الملفات الأساسية موجودة من أول تشغيل
 if not os.path.exists(CATEGORIES_FILE):
     save_json(CATEGORIES_FILE, DEFAULT_CATEGORIES)
 if not os.path.exists(TRADERS_FILE):
@@ -175,7 +184,6 @@ def increment_message_stats():
     stats["total"] = stats.get("total", 0) + 1
     stats.setdefault("by_date", {})
     stats["by_date"][today] = stats["by_date"].get(today, 0) + 1
-    # سيب بس آخر ٣٠ يوم في الإحصائيات التفصيلية عشان الملف يفضل صغير
     if len(stats["by_date"]) > 30:
         trimmed = dict(sorted(stats["by_date"].items())[-30:])
         stats["by_date"] = trimmed
@@ -295,7 +303,7 @@ def check_and_increment_limit(phone_number):
 
 
 # =========================================================
-# اختيار التجار للرد: أولوية + عشوائي + منع التكرار في نفس اليوم
+# اختيار التجار للرد
 # =========================================================
 def get_category_traders(cat_id):
     return [
@@ -322,7 +330,6 @@ def save_shown_ids(phone, cat_id, trader_ids, reset=False):
     else:
         existing = history[today][phone].get(cat_id, [])
         history[today][phone][cat_id] = existing + trader_ids
-    # سيب بس آخر يومين عشان الملف يفضل صغير
     history = {k: v for k, v in sorted(history.items())[-2:]}
     save_json(SHOWN_FILE, history)
 
@@ -449,8 +456,6 @@ def send_text_message(to_number, message):
 
 
 def send_template_message(to_number, template_name, language_code, body_params):
-    """يبعت رسالة عبر قالب معتمد من Meta - الطريقة الوحيدة المسموحة
-    لبدء محادثة مع رقم ما كلمناش خلال آخر ٢٤ ساعة."""
     to_number = normalize_phone(to_number)
     headers = {"Authorization": f"Bearer {ACCESS_TOKEN}", "Content-Type": "application/json"}
     payload = {
@@ -562,7 +567,6 @@ def log_unmatched_query(phone_number, user_text):
         "phone": phone_number,
         "text": user_text[:200],
     })
-    # سيب بس آخر ١٠٠ طلب عشان الملف يفضل صغير
     entries = entries[-100:]
     save_json(UNMATCHED_FILE, entries)
 
@@ -603,7 +607,6 @@ def receive_message():
             send_text_message(from_number, LIMIT_REACHED_MESSAGE)
             return jsonify({"status": "ok"}), 200
 
-        # أول رسالة من رقم جديد تماماً: نسأله تاجر ولا عميل قبل أي حاجة تانية
         if is_new_user(from_number):
             register_new_user(from_number)
             send_role_question(from_number)
@@ -617,11 +620,11 @@ def receive_message():
             elif kind == "join":
                 send_text_message(from_number, trader_join_reply(from_number))
             elif kind == "confirm":
-                trader = next((t for t in get_traders() if t.get("whatsapp") == from_number), None)
+                trader = next((t for t in get_traders() if t.get("whatsapp") == from_number and t.get("status") == "approved"), None)
                 if trader:
-                    send_text_message(from_number, build_check_message(trader))
+                    send_confirmation_via_template(trader)
                 else:
-                    send_text_message(from_number, JOIN_REPLY_TEXT)
+                    send_text_message(from_number, CUSTOMER_CONFIRM_GUIDE_TEXT)
             elif kind == "category":
                 reply = build_category_reply(value_, from_number)
                 send_text_message(from_number, reply)
@@ -680,8 +683,6 @@ def register_page():
 
     prefill_script = ""
     raw_trader_id = request.args.get("id", "")
-    # حماية من فوضى ممكن تتلزق في الرابط (زي فواصل زيادة من قالب واتساب) -
-    # ناخد بس أول جزء متصل من حروف/أرقام ونرمي أي حاجة غريبة بعده
     trader_id_match = re.match(r"^[A-Za-z0-9_-]+", raw_trader_id.strip())
     trader_id = trader_id_match.group(0) if trader_id_match else ""
     if trader_id:
@@ -725,19 +726,15 @@ ABOUT_APP_INTRO = (
     "فايدتك من الانضمام: زباين جدد بيوصلوك من غير أي مجهود منك.\n"
 )
 
-# اسم القالب المعتمد من Meta - لازم يتسجل بنفس الاسم بالظبط في WhatsApp Manager
 CONFIRM_DATA_TEMPLATE_NAME = "confirm_trader_data"
 CONFIRM_DATA_TEMPLATE_LANG = "ar"
 
 
 def build_correction_link(trader):
-    """رابط قصير برقم تعريف التاجر بس - الصفحة نفسها بتجيب باقي بياناته من عندنا."""
     return f"{REGISTER_URL}?correction=1&id={trader.get('id', '')}"
 
 
 def send_confirmation_via_template(trader):
-    """يبعت رسالة تأكيد بيانات عبر قالب معتمد - بتشتغل حتى مع أرقام
-    ما كلمناك خلال آخر ٢٤ ساعة (عكس الرسائل النصية العادية)."""
     cat_title = {c["id"]: c["title"] for c in get_categories()}
     status = trader.get("status", "pending")
     name = trader.get("name", "") or "تاجرنا العزيز"
@@ -795,19 +792,13 @@ def build_check_message(trader, include_intro=True):
         )
 
 
-CHECK_GENERIC_RESPONSE = (
-    "لو الرقم أو الاسم دا مسجل عندنا، وصلته رسالة واتساب الآن فيها كل التفاصيل. "
-    "تأكد من فتح واتساب على نفس الرقم اللي كتبته."
-)
-
-
 @app.route("/api/check-trader", methods=["GET"])
 def api_check_trader():
     phone_raw = request.args.get("whatsapp", "").strip()
     name_query = request.args.get("name", "").strip().lower()
 
     if not phone_raw and not name_query:
-        return jsonify({"message": CHECK_GENERIC_RESPONSE})
+        return jsonify({"status": "error", "message": "يرجى كتابة رقم الواتساب أو اسم المحل للتأكد."}), 400
 
     traders = get_traders()
     matches = []
@@ -824,17 +815,29 @@ def api_check_trader():
             if name_query in t.get("name", "").lower():
                 matches.append(t)
 
-    # نرسل التفاصيل على واتساب بتاع كل تسجيل مطابق بس - أبداً ما بنعرضها هنا
-    # عشان ما في زول يقدر يشوف بيانات شخص تاني من غير ما يملك رقمه فعلاً
+    # حالة عدم وجود الرقم في قاعدة البيانات
+    if not matches:
+        if phone_raw:
+            try:
+                send_text_message(phone_raw, NOT_REGISTERED_TRADER_MESSAGE)
+            except Exception as e:
+                print("Failed to send not-registered message:", e)
+        return jsonify({
+            "status": "not_found",
+            "message": "هذا الرقم غير مسجل لدينا كتاجر. تم إرسال رسالة توضيحية على الواتساب للتأكد من الرقم أو التسجيل."
+        })
+
+    # حالة وجود التاجر
     for t in matches:
         try:
             send_confirmation_via_template(t)
         except Exception as e:
             print("Check-trader message send failed (non-fatal):", e)
 
-    # نفس الرد بالظبط في كل الحالات (موجود/غير موجود) عشان مافي زول يقدر
-    # يكتشف مين مسجل عندنا ومين لأ من خلال فرق في الرد
-    return jsonify({"message": CHECK_GENERIC_RESPONSE})
+    return jsonify({
+        "status": "success",
+        "message": f"تم إرسال بيانات التعديل والتأكيد إلى رقم الواتساب المسجل لدينا ({matches[0].get('whatsapp')})."
+    })
 
 
 @app.route("/submit-trader", methods=["POST"])
@@ -868,7 +871,6 @@ def submit_trader():
         }
 
         if original:
-            # ده طلب تصحيح لتاجر معتمد بالفعل - نربطه بيه بدل ما نعتبره تسجيل جديد
             new_trader["is_correction"] = True
             new_trader["correction_for_id"] = original["id"]
             original["status"] = "correction_pending"
@@ -899,7 +901,6 @@ def submit_trader():
 
 # =========================================================
 # صفحة الإدارة
-# mohbab.pythonanywhere.com/admin?key=...
 # =========================================================
 ADMIN_PAGE = """
 <!DOCTYPE html>
@@ -1144,8 +1145,6 @@ def admin_page():
         if t.get("status") == "approved" and not t.get("is_correction") and matches_search(t)
     ]
 
-    # العدادات فوق التبويبات لازم توضح العدد الكلي الحقيقي دايماً،
-    # مش عدد نتائج البحث - عشان محدش يفتكر إن البيانات اتمسحت لو البحث رجّع صفر نتيجة
     total_pending_count = sum(1 for t in traders if t.get("status") == "pending" and not t.get("is_correction"))
     total_approved_count = sum(1 for t in traders if t.get("status") == "approved" and not t.get("is_correction"))
 
@@ -1261,7 +1260,6 @@ def admin_page():
         for c in categories
     )
 
-    # جدول إحصائيات التجار حسب التخصص
     approved_all = [t for t in traders if t.get("status") == "approved"]
     stats_rows = ""
     for c in categories:
