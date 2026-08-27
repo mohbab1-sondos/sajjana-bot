@@ -1110,3 +1110,10 @@ def check_page():
       os.path.join(BASE_DIR, "templates", "check.html"), encoding="utf-8"
   ) as f:
     return f.read()
+cat << 'EOF' >> /home/mohbab/sajjana-bot/app.py
+
+@app.route("/check", methods=["GET"])
+def check_page():
+    with open(os.path.join(BASE_DIR, "templates", "check.html"), encoding="utf-8") as f:
+        return f.read()
+EOF
