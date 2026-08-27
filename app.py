@@ -1103,3 +1103,10 @@ def admin_page():
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port=5000, debug=True)
+
+@app.route("/check", methods=["GET"])
+def check_page():
+  with open(
+      os.path.join(BASE_DIR, "templates", "check.html"), encoding="utf-8"
+  ) as f:
+    return f.read()
