@@ -17,91 +17,43 @@
   h1.display{font-family:'Lalezar',sans-serif; font-weight:400; font-size:2rem; margin:0 0 8px;}
   .sub{color:var(--steel-soft); margin:0 0 30px;}
   .logo-header{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
-  .logo-header img{height:90px; width:90px; object-fit:contain;}
+  .logo-header img{height:52px; width:52px; object-fit:contain;}
   a.back{display:inline-block; margin-bottom:20px; color:var(--steel-soft); text-decoration:none; font-size:0.9rem;}
   .box{background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:26px;}
-  input{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:4px; font-size:1rem; margin-bottom:14px;}
-  button{width:100%; padding:13px; background:var(--steel); color:var(--paper); border:none; border-radius:4px;
-    font-size:1rem; font-weight:700; cursor:pointer;}
-  button:hover{background:var(--rust);}
-  button:disabled{opacity:0.6; cursor:not-allowed;}
-  .switch-link{display:block; text-align:center; margin-top:4px; color:var(--steel-soft); font-size:0.85rem;
-    text-decoration:underline; cursor:pointer; background:none; border:none; width:auto;}
-  #result{margin-top:20px;}
-  .card{background:#fff; border:1px solid var(--line); border-radius:6px; padding:18px; margin-top:10px;}
-  .hint{font-size:0.82rem; color:var(--steel-soft); margin:-8px 0 14px;}
-  .privacy-note{font-size:0.8rem; color:var(--steel-soft); margin-top:24px; padding:12px; background:var(--paper);
+  .box p{margin:0 0 20px; font-size:1rem;}
+  .action-btn{display:block; text-align:center; padding:15px; background:#25D366; color:#fff;
+    border-radius:6px; text-decoration:none; font-size:1.05rem; font-weight:700;}
+  .action-btn:hover{background:#1ebe57;}
+  .steps{margin-top:24px; padding:0; list-style:none;}
+  .steps li{display:flex; gap:10px; margin-bottom:12px; font-size:0.92rem; color:var(--steel-soft);}
+  .steps li b{color:var(--rust); flex:none;}
+  .hint{font-size:0.82rem; color:var(--steel-soft); margin-top:22px; padding:12px; background:#fff;
     border-radius:4px; border:1px solid var(--line);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <a class="back" href="/">← رجوع للصفحة الرئيسية</a>
-  <div class="logo-header"><img src="/static/logo.png" style="height: 100px !important; width: auto !important; max-height: none !important; object-fit: contain;"></div>
+  <div class="logo-header"><img src="/static/logo.png" alt="شعار"></div>
   <h1 class="display">تأكد من بياناتك</h1>
-  <p class="sub" id="subText">اكتب رقم واتسابك وهنبعتلك حالة بياناتك على نفس الرقم مباشرة.</p>
+  <p class="sub">أسرع طريقة تتأكد بيها من بياناتك المسجلة — من واتساب مباشرة.</p>
 
   <div class="box">
-    <div id="phoneField">
-      <input type="tel" id="phoneInput" placeholder="249912345678 (بدون علامة +)">
-      <p class="hint">لو ما متأكد من الرقم اللي سجلت بيه بالظبط، جرب البحث بالاسم بدل كده.</p>
-    </div>
-    <div id="nameField" style="display:none;">
-      <input type="text" id="nameInput" placeholder="اسم المحل أو التاجر">
-    </div>
-    <button id="submitBtn" onclick="checkTrader()">ابعتلي على واتساب</button>
-    <button type="button" class="switch-link" onclick="toggleMode()" id="switchBtn">ما لاقي بياناتك بالرقم؟ ابحث بالاسم</button>
-    <div id="result"></div>
+    <p>اضغط الزرار تحت، وهيفتحلك واتساب برسالة جاهزة — بس ابعتها زي ما هي وهيوصلك ردّك فوراً.</p>
+    <a class="action-btn" href="https://wa.me/<!--WA_PHONE-->?text=%D8%AA%D8%A3%D9%83%D9%8A%D8%AF" target="_blank" rel="noopener">
+      ✅ افتح واتساب وابعت "تأكيد"
+    </a>
+
+    <ul class="steps">
+      <li><b>١.</b> اضغط الزرار فوق</li>
+      <li><b>٢.</b> واتساب هيفتح برسالة "تأكيد" جاهزة</li>
+      <li><b>٣.</b> اضغط إرسال، وهيوصلك ردّك فوراً ببياناتك الحالية</li>
+    </ul>
+
+    <p class="hint">
+      💡 مهم: لازم تبعت الرسالة من نفس رقم الواتساب اللي سجّلت بيه في الدليل، عشان نقدر نلاقي بياناتك.
+    </p>
   </div>
-
-  <p class="privacy-note">
-    🔒 لحماية خصوصية التجار، مبنعرضش أي بيانات هنا على الشاشة — أي نتيجة بتتبعت على واتساب بتاع صاحب الرقم نفسه بس.
-  </p>
 </div>
-
-<script>
-let mode = 'phone';
-
-function toggleMode(){
-  mode = (mode === 'phone') ? 'name' : 'phone';
-  document.getElementById('phoneField').style.display = (mode === 'phone') ? 'block' : 'none';
-  document.getElementById('nameField').style.display = (mode === 'name') ? 'block' : 'none';
-  document.getElementById('switchBtn').textContent = (mode === 'phone')
-    ? 'مش لاقي بياناتك بالرقم؟ ابحث بالاسم'
-    : 'ارجع للبحث بالرقم';
-  document.getElementById('result').innerHTML = '';
-}
-
-async function checkTrader(){
-  const resultDiv = document.getElementById('result');
-  const btn = document.getElementById('submitBtn');
-  resultDiv.innerHTML = '';
-
-  let url = '';
-  if(mode === 'phone'){
-    const phone = document.getElementById('phoneInput').value.trim();
-    if(!phone){ resultDiv.innerHTML = '<p>اكتب رقمك الأول.</p>'; return; }
-    url = '/api/check-trader?whatsapp=' + encodeURIComponent(phone);
-  } else {
-    const name = document.getElementById('nameInput').value.trim();
-    if(!name){ resultDiv.innerHTML = '<p>اكتب الاسم الأول.</p>'; return; }
-    url = '/api/check-trader?name=' + encodeURIComponent(name);
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'جاري الإرسال...';
-
-  try{
-    const res = await fetch(url);
-    const data = await res.json();
-    resultDiv.innerHTML = `<div class="card"><p>${data.message}</p></div>`;
-  } catch(err){
-    resultDiv.innerHTML = '<div class="card"><p>حصلت مشكلة، حاول تاني.</p></div>';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'ابعتلي على واتساب';
-  }
-}
-</script>
 </body>
 </html>
