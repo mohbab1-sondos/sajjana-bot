@@ -1,0 +1,5 @@
+   backup_config.py
+   *.pyc
+   __pycache__/
+   backups/
+   .env
