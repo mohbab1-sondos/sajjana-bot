@@ -10,6 +10,8 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+from backup import main as run_backup_job
+
 # =========================================================
 # الإعدادات
 # =========================================================
@@ -583,3 +585,15 @@ def verify_webhook():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = req
+
+@app.route('/run-backup')
+def run_backup():
+    key = request.args.get('key', '')
+    admin_key = os.environ.get('SAJJANA_ADMIN_KEY', '')
+    if not admin_key or key != admin_key:
+        return jsonify({'status': 'error', 'message': 'unauthorized'}), 403
+    try:
+        run_backup_job()
+        return jsonify({'status': 'ok', 'message': 'backup finished'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
